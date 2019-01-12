@@ -1,0 +1,17 @@
+FileSets:
+  Default:
+    Include:
+      - ".watchcode.yaml"
+      - "*.py"
+    Exclude:
+    MatchMode: "unix"
+
+
+Tasks:
+  Default:
+    - "echo test"
+
+Targets:
+  Default:
+    FileSet: Default
+    Task: Default
