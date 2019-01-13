@@ -6,12 +6,19 @@ FileSets:
     Exclude:
     MatchMode: "unix"
 
-
 Tasks:
   Default:
-    - "echo test"
+    Commands:
+      - "echo 'starting build...'"
+      - "sleep 5"
+      - 'echo "stopped build"'
+      - echo another test
+    ClearScreen: true
+    QueueEvents: true
 
 Targets:
   Default:
     FileSet: Default
     Task: Default
+
+DefaultTarget: Default
