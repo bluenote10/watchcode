@@ -1,2 +1,5 @@
 .idea/
+.eggs/
 *.pyc
+.coverage
+*.egg-info/

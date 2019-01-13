@@ -1,23 +1,23 @@
-FileSets:
-  Default:
-    Include:
+filesets:
+  default:
+    include:
       - ".watchcode.yaml"
       - "*.py"
-    Exclude:
-    MatchMode: "fnmatch"
+    exclude:
+    match_mode: "fnmatch"
 
-Tasks:
-  Default:
-    Commands:
+tasks:
+  default:
+    commands:
       - "py.test"
-    ClearScreen: false
-    QueueEvents: false
+    clear_screen: true
+    queue_events: false
 
 
-Targets:
-  Default:
-    FileSet: Default
-    Task: Default
+targets:
+  default:
+    fileset: default
+    task: default
 
-DefaultTarget: Default
-ShowAllEvents: true
+default_target: default
+log_all_events: false
