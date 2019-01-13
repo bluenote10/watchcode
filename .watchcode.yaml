@@ -4,17 +4,15 @@ FileSets:
       - ".watchcode.yaml"
       - "*.py"
     Exclude:
-    MatchMode: "unix"
+    MatchMode: "fnmatch"
 
 Tasks:
   Default:
     Commands:
-      - "echo 'starting build...'"
-      - "sleep 5"
-      - 'echo "stopped build"'
-      - echo another test
-    ClearScreen: true
-    QueueEvents: true
+      - "py.test"
+    ClearScreen: false
+    QueueEvents: false
+
 
 Targets:
   Default:
@@ -22,3 +20,4 @@ Targets:
     Task: Default
 
 DefaultTarget: Default
+ShowAllEvents: true
