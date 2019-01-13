@@ -20,6 +20,7 @@ import fnmatch
 import re
 
 #from watchcode.io_handler import IOHandler
+import templates
 from io_handler import IOHandler
 from config import FileSet, Task, Target, load_config, DEFAULT_CONFIG_FILENAME
 
@@ -95,6 +96,10 @@ class EventHandler(FileSystemEventHandler):
 
 
 def parse_args():
+    template_names = ", ".join(
+        sorted(templates.get_available_templates().keys())
+    )
+
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "target",
@@ -109,6 +114,13 @@ def parse_args():
         default=".",
         help="Working directory to run in, defaults to the current directory.",
     )
+    parser.add_argument(
+        "--init-config",
+        metavar="<TEMPLATE>",
+        help="Create a new '.watchcode.yaml' config in the current working directory "
+             "from a preset. Available templates: {}".format(template_names),
+        type=templates.validate_template,
+    )
     args = parser.parse_args()
     return args
 
@@ -116,13 +128,31 @@ def parse_args():
 def main():
     args = parse_args()
     working_dir = args.dir
+
+    if args.init_config is not None:
+        config_path = os.path.join(working_dir, DEFAULT_CONFIG_FILENAME)
+        if os.path.exists(config_path):
+            print("Config file '{}' already exists. Remove file first "
+                  "if you want a new config.".format(config_path))
+            sys.exit(1)
+        else:
+            print(" * Creating config file '{}'.".format(config_path))
+            with open(config_path, "w") as f:
+                f.write(args.init_config)
+
     print(" * Monitoring '{}' for changes... [Press CTRL+C to exit]".format(working_dir))
+
+    # TODO: Should we actually run the task once initially?
+    # But then the above message would not make sense and we would never get a chance to
+    # print the CTRL+C message. Well after a build, if no new one is scheduled...
+    # Note that this would affect the "triggering events" semantics, because this initial
+    # build would not have an explicit trigger. Maybe we simply have to use multiple types.
 
     event_handler = EventHandler(working_dir, override_target=args.target)
 
     observer = Observer()
     observer.schedule(event_handler, working_dir, recursive=True)
-    observer.start()
+    observer.start()  # TODO: catch OSError here? Thrown e.g. on wrong file permissions
     try:
         while True:
             time.sleep(1000)

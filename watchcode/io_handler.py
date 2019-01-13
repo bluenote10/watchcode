@@ -142,4 +142,4 @@ class IOHandler(object):
         else:
             # Trying this approach to avoid losing scrollback:
             # https://askubuntu.com/a/997893/161463
-            print('\33[H\33[2J')
+            sys.stdout.write('\33[H\33[2J')
