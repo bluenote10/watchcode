@@ -9,6 +9,7 @@ import argparse
 import os
 import sys
 import time
+import six
 import subprocess
 
 import yaml
@@ -20,23 +21,10 @@ import fnmatch
 import re
 
 #from watchcode.io_handler import IOHandler
-import templates
-from io_handler import IOHandler
-from config import FileSet, Task, Target, load_config, DEFAULT_CONFIG_FILENAME
-
-
-def is_config_file(path):
-    # TODO: move into event class?
-    path_components = os.path.split(path)
-    # TODO: requires case insensitive matching for Windows
-    return len(path_components) == 2 and path_components[1] == DEFAULT_CONFIG_FILENAME
-
-
-class Event(object):
-    def __init__(self, path, type, is_dir):
-        self.path = path
-        self.type = type
-        self.is_dir = is_dir
+from . import templates
+from .io_handler import LaunchInfo, IOHandler
+from .config import FileSet, Task, Target, load_config, DEFAULT_CONFIG_FILENAME
+from .trigger import InitialTrigger, ManualTrigger, FileEvent
 
 
 class EventHandler(FileSystemEventHandler):
@@ -63,12 +51,12 @@ class EventHandler(FileSystemEventHandler):
         # Convert into simplified representation to avoid special handling of dest_path
         if event.event_type == "moved":
             events = [
-                Event(event.src_path, event.event_type + "_from", event.is_directory),
-                Event(event.dest_path, event.event_type + "_to", event.is_directory),
+                FileEvent(event.src_path, event.event_type + "_from", event.is_directory),
+                FileEvent(event.dest_path, event.event_type + "_to", event.is_directory),
             ]
         else:
             events = [
-                Event(event.src_path, event.event_type, event.is_directory),
+                FileEvent(event.src_path, event.event_type, event.is_directory),
             ]
 
         for event in events:
@@ -77,21 +65,49 @@ class EventHandler(FileSystemEventHandler):
     def handle_event(self, event):
 
         # First attempt to reload config (in cases where we have none)
-        if is_config_file(event.path):
+        config_reloaded = False
+        if event.is_config_file:
             print(" * Reloading config") # TODO we must not log here... during builds...
             self.load_config()
+            config_reloaded = True
+            # Hm, what if we return early, actually impossible, still not so nice
+            # to communicate the config_reloaded via the trigger below?
 
         if self.target is None or self.config is None:
             return
 
         matches = self.target.fileset.matches(event.path, event.type, event.is_dir)
 
-        self.io_handler.trigger(
-            matches, event,
+        # TODO: logging goes here...
+
+        if matches:
+            launch_info = LaunchInfo(
+                trigger=event,
+                commands=self.target.task.commands,
+                clear_screen=self.target.task.clear_screen,
+                config_reloaded=config_reloaded,
+            )
+            self.io_handler.trigger(
+                launch_info, queue_trigger=self.target.task.queue_events,
+            )
+
+    def on_manual_trigger(self, is_initial=False):
+        if is_initial:
+            trigger = InitialTrigger()
+        else:
+            trigger = ManualTrigger()
+
+        if self.target is None or self.config is None:
+            return
+
+        launch_info = LaunchInfo(
+            trigger=trigger,
             commands=self.target.task.commands,
-            log_all=self.config.log_all_events,
-            queue_trigger=self.target.task.queue_events,
             clear_screen=self.target.task.clear_screen,
+            config_reloaded=False,
+        )
+        self.io_handler.trigger(
+            launch_info, queue_trigger=self.target.task.queue_events,
         )
 
 
@@ -140,8 +156,6 @@ def main():
             with open(config_path, "w") as f:
                 f.write(args.init_config)
 
-    print(" * Monitoring '{}' for changes... [Press CTRL+C to exit]".format(working_dir))
-
     # TODO: Should we actually run the task once initially?
     # But then the above message would not make sense and we would never get a chance to
     # print the CTRL+C message. Well after a build, if no new one is scheduled...
@@ -149,13 +163,18 @@ def main():
     # build would not have an explicit trigger. Maybe we simply have to use multiple types.
 
     event_handler = EventHandler(working_dir, override_target=args.target)
+    event_handler.on_manual_trigger(is_initial=True)
 
     observer = Observer()
     observer.schedule(event_handler, working_dir, recursive=True)
     observer.start()  # TODO: catch OSError here? Thrown e.g. on wrong file permissions
     try:
+        #while True:
+        #    time.sleep(1000)
         while True:
-            time.sleep(1000)
+            input_value = six.moves.input()
+            if input_value == "":
+                event_handler.on_manual_trigger()
     except KeyboardInterrupt:
         observer.stop()
     observer.join()

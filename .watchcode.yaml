@@ -4,7 +4,7 @@ filesets:
       - ".watchcode.yaml"
       - "*.py"
     exclude:
-    match_mode: "fnmatch"
+    match_mode: "gitlike"
 
 tasks:
   default:

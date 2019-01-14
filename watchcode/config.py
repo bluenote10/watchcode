@@ -38,6 +38,10 @@ class FileSet(object):
         self.match_mode = match_mode
         if self.match_mode == "fnmatch":
             self.matcher = matching.matcher_fnmatch
+        elif self.match_mode == "re":
+            self.matcher = matching.matcher_re
+        elif self.match_mode == "gitlike":
+            self.matcher = matching.matcher_gitlike
         else:
             print("Unknown match mode: '{}'".format(match_mode))
             sys.exit(1)
