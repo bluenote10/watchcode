@@ -169,12 +169,12 @@ def main():
     observer.schedule(event_handler, working_dir, recursive=True)
     observer.start()  # TODO: catch OSError here? Thrown e.g. on wrong file permissions
     try:
-        #while True:
-        #    time.sleep(1000)
         while True:
-            input_value = six.moves.input()
-            if input_value == "":
-                event_handler.on_manual_trigger()
+            time.sleep(1000)
+        #while True:
+        #    input_value = six.moves.input()
+        #    if input_value == "":
+        #        event_handler.on_manual_trigger()
     except KeyboardInterrupt:
         observer.stop()
     observer.join()

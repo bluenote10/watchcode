@@ -4,8 +4,12 @@ import fnmatch
 import os
 import re
 
+import subprocess
+
 
 def matcher_fnmatch(path, pattern, is_dir):
+    if is_dir:
+        return False
     basename = os.path.basename(path)
     return fnmatch.fnmatchcase(basename, pattern)
 
@@ -25,3 +29,31 @@ def matcher_gitlike(path, pattern, is_dir):
     filename_match = fnmatch.fnmatchcase(basename, pattern)
     return filename_match or pattern in path
 
+
+def is_gitignore(path):
+
+    try:
+        p = subprocess.Popen(
+            ["git", "check-ignore", path],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+    except OSError:
+        warning = "Cannot execute 'git check-ignore'."
+        # TODO communicate warning
+
+    outs, errs = p.communicate()
+    ret = p.returncode
+
+    if ret == 0:
+        return True
+    elif ret == 1 and errs == "":
+        return False
+    else:
+        # return code 128 is "fatal error"
+        warning = "'git check-ignore' returned unexpected return code ({})".format(ret)
+        if errs != "":
+            warning += " with error: {}".format(errs)
+        else:
+            warning += "."
+        # TODO communicate warning

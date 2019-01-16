@@ -15,6 +15,7 @@ class KN(object):
     filesets = "filesets"
     include = "include"
     exclude = "exclude"
+    exclude_gitignore = "exclude_gitignore"
     match_mode = "match_mode"
 
     tasks = "tasks"
@@ -31,9 +32,10 @@ class KN(object):
 
 
 class FileSet(object):
-    def __init__(self, patterns_incl, patterns_excl, match_mode):
+    def __init__(self, patterns_incl, patterns_excl, match_mode, exclude_gitignore):
         self.patterns_incl = patterns_incl
         self.patterns_excl = patterns_excl
+        self.exclude_gitignore = exclude_gitignore
 
         self.match_mode = match_mode
         if self.match_mode == "fnmatch":
@@ -47,6 +49,8 @@ class FileSet(object):
             sys.exit(1)
 
     def matches(self, path, event_type, is_dir):
+        # TODO return an object that stores which of the
+        # three cases was applied, with additional infos
 
         matches = False
         for pattern in self.patterns_incl:
@@ -59,6 +63,11 @@ class FileSet(object):
                 if self.matcher(path, pattern, is_dir):
                     matches = False
                     break
+
+        if matches:
+            if self.exclude_gitignore:
+                if matching.is_gitignore(path):
+                    matches = False
 
         return matches
 
@@ -128,7 +137,7 @@ def safe_key_extract(data, key, what, instance_checker=None):
     if not isinstance(data, dict):
         print("Error: {} must be a dictionary, but got: {}".format(what, data))
         sys.exit(0)
-    if not key in data:
+    if key not in data:
         print("Error: {} must contain key '{}'.".format(what, key))
         sys.exit(0)
     else:
@@ -145,6 +154,7 @@ def parse_fileset(fileset_data):
     patterns_incl = safe_key_extract(fileset_data, KN.include, "File set")
     patterns_excl = safe_key_extract(fileset_data, KN.exclude, "File set")
     match_mode = safe_key_extract(fileset_data, KN.match_mode, "File set")
+    exclude_gitignore = safe_key_extract(fileset_data, KN.exclude_gitignore, "File set", InstanceCheckerBool)
 
     # When the incl/excl lists are empty, the yaml parser returns None.
     # We want empty lists in these cases.
@@ -158,6 +168,7 @@ def parse_fileset(fileset_data):
         patterns_incl=patterns_incl,
         patterns_excl=patterns_excl,
         match_mode=match_mode,
+        exclude_gitignore=exclude_gitignore,
     )
 
 

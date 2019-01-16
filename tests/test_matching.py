@@ -5,11 +5,11 @@ from watchcode.matching import matcher_fnmatch, matcher_re, matcher_gitlike
 
 def test_fnmatch():
 
-    def matches(path, pattern):
-        assert matcher_fnmatch(path, pattern, None)
+    def matches(path, pattern, is_dir=False):
+        assert matcher_fnmatch(path, pattern, is_dir)
 
-    def differs(path, pattern):
-        assert not matcher_fnmatch(path, pattern, None)
+    def differs(path, pattern, is_dir=False):
+        assert not matcher_fnmatch(path, pattern, is_dir)
 
     matches("test.py", "*.py")
     differs("test.py", "*.txt")
@@ -17,6 +17,10 @@ def test_fnmatch():
     differs("./.test.py", "*.txt")
 
     differs("test.pyyy", "*.py")
+
+    # don't match on directories
+    differs(".", "*", is_dir=True)
+    differs("./subdirectory", "*", is_dir=True)
 
 
 def test_re():

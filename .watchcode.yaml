@@ -3,8 +3,10 @@ filesets:
     include:
       - ".watchcode.yaml"
       - "*.py"
+      - "*"
     exclude:
-    match_mode: "gitlike"
+    exclude_gitignore: true
+    match_mode: "fnmatch"
 
 tasks:
   default:
