@@ -11,7 +11,7 @@ filesets:
 tasks:
   default:
     commands:
-      - "py.test"
+      - "py.test -s"
     clear_screen: true
     queue_events: false
 

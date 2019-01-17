@@ -69,6 +69,8 @@ class FileSet(object):
                 if matching.is_gitignore(path):
                     matches = False
 
+        #if matches:
+        #    import IPython; IPython.embed()
         return matches
 
 

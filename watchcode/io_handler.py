@@ -112,6 +112,10 @@ class IOHandler(object):
         with self.lock:
             print(" * Task summary:")
             for exec_info in exec_infos:
+                if exec_info.retcode == 0:
+                    return_color = FG.green
+                else:
+                    return_color = FG.red
                 print("   {}{}{} took {}{:.1f}{} sec and returned {}{}{}.".format(
                     color(FG.blue, style=Style.bold),
                     exec_info.command,
@@ -119,7 +123,7 @@ class IOHandler(object):
                     color(FG.yellow, style=Style.bold),
                     exec_info.runtime,
                     color(),
-                    color(FG.white, style=Style.bold),
+                    color(return_color, style=Style.bold),
                     exec_info.retcode,
                     color(),
                 ))

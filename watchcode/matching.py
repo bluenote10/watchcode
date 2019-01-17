@@ -23,7 +23,7 @@ def matcher_gitlike(path, pattern, is_dir):
     if is_dir and path[-1] != os.path.sep:
         path = path + os.path.sep
 
-    #components = os.path.split(path)
+    #comps = path.split(os.sep)
 
     basename = os.path.basename(path)
     filename_match = fnmatch.fnmatchcase(basename, pattern)
@@ -31,6 +31,13 @@ def matcher_gitlike(path, pattern, is_dir):
 
 
 def is_gitignore(path):
+
+    # `git check-ignore` does not return an ignore status for
+    # files under `.git` itself. We need special handling for
+    # that:
+    comps = path.split(os.sep)
+    if len(comps) >= 2 and comps[1] == ".git":
+        return True
 
     try:
         p = subprocess.Popen(
