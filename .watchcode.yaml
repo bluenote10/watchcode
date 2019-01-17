@@ -5,6 +5,7 @@ filesets:
       - "*.py"
       - "*"
     exclude:
+      - ".watchcode.log"
     exclude_gitignore: true
     match_mode: "fnmatch"
 

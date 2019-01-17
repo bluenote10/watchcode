@@ -111,11 +111,13 @@ class IOHandler(object):
     def on_thread_finished(self, exec_infos):
         with self.lock:
             print(" * Task summary:")
+            all_good = True
             for exec_info in exec_infos:
                 if exec_info.retcode == 0:
                     return_color = FG.green
                 else:
                     return_color = FG.red
+                    all_good = False
                 print("   {}{}{} took {}{:.1f}{} sec and returned {}{}{}.".format(
                     color(FG.blue, style=Style.bold),
                     exec_info.command,
@@ -128,6 +130,13 @@ class IOHandler(object):
                     color(),
                 ))
             print(" * Monitoring '{}' for changes... [Press <CTRL>+C to exit, <ENTER> to re-run]".format(self.working_dir))
+
+            if all_good:
+                snd_file = os.path.join(os.path.dirname(__file__), "sounds", "456581__bumpelsnake__nameit5.wav")
+            else:
+                snd_file = os.path.join(os.path.dirname(__file__), "sounds", "377017__elmasmalo1__notification-pop.wav")
+            p = subprocess.Popen(["ffplay", "-nodisp", "-autoexit", "-hide_banner", snd_file], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            p.wait()
 
             # Reset the thread state
             self.thread = None

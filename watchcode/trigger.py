@@ -30,6 +30,16 @@ class FileEvent(Trigger):
         self.type = type
         self.is_dir = is_dir
 
+    @property
+    def path_normalized(self):
+        if self.is_dir:
+            if len(self.path) > 0 and self.path[-1] != os.sep:
+                return self.path + os.sep
+            else:
+                return self.path
+        else:
+            return self.path
+
     def __str__(self):
         return "{}{} {}[{}]{}".format(
             color(FG.green, style=Style.bold),

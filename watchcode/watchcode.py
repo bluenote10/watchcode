@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# *-* encoding: utf-8
 """
 Generic tool to watch for code changes and continuously execute commands.
 """
@@ -7,6 +8,7 @@ from __future__ import division, print_function
 
 import argparse
 import os
+import logging
 import sys
 import time
 import six
@@ -25,6 +27,8 @@ from . import templates
 from .io_handler import LaunchInfo, IOHandler
 from .config import FileSet, Task, Target, load_config, DEFAULT_CONFIG_FILENAME
 from .trigger import InitialTrigger, ManualTrigger, FileEvent
+
+logger = logging.getLogger(__name__)
 
 
 class EventHandler(FileSystemEventHandler):
@@ -67,6 +71,7 @@ class EventHandler(FileSystemEventHandler):
         # First attempt to reload config (in cases where we have none)
         config_reloaded = False
         if event.is_config_file:
+            logger.info("Reloading config...")
             print(" * Reloading config") # TODO we must not log here... during builds...
             self.load_config()
             config_reloaded = True
@@ -78,7 +83,11 @@ class EventHandler(FileSystemEventHandler):
 
         matches = self.target.fileset.matches(event.path, event.type, event.is_dir)
 
-        # TODO: logging goes here...
+        logger.info(u"Event: {:<60s} {:<12} {}".format(
+            event.path_normalized,
+            event.type,
+            u"✓" if matches else u"○",
+        ))
 
         if matches:
             launch_info = LaunchInfo(
@@ -137,7 +146,24 @@ def parse_args():
              "from a preset. Available templates: {}".format(template_names),
         type=templates.validate_template,
     )
+    parser.add_argument(
+        "--log",
+        action="store_true",
+        help="Enable debug logging to file '.watchcode.log'.",
+    )
     args = parser.parse_args()
+
+    if args.log:
+        log_file = os.path.join(args.dir, '.watchcode.log')
+        formatter = logging.Formatter(
+            fmt='%(asctime)s.%(msecs)03d | %(levelname)-8s | %(message)s',
+            datefmt='%H:%M:%S')
+        handler = logging.FileHandler(log_file, mode='w')
+        handler.setFormatter(formatter)
+        logger.setLevel(logging.INFO)
+        logger.addHandler(handler)
+        #logger.addHandler(screen_handler)
+        #logging.basicConfig(level=logging.INFO)
     return args
 
 
