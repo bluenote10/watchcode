@@ -83,11 +83,15 @@ class EventHandler(FileSystemEventHandler):
 
         matches = self.target.fileset.matches(event.path, event.type, event.is_dir)
 
-        logger.info(u"Event: {:<60s} {:<12} {}".format(
-            event.path_normalized,
-            event.type,
-            u"✓" if matches else u"○",
-        ))
+        # There is one exception we should make for logging: We should not log
+        # changes to '.watchcode.log' otherwise a log event would trigger yet
+        # another change, creating a log loop.
+        if event.basename != ".watchcode.log":
+            logger.info(u"Event: {:<60s} {:<12} {}".format(
+                event.path_normalized,
+                event.type,
+                u"✓" if matches else u"○",
+            ))
 
         if matches:
             launch_info = LaunchInfo(

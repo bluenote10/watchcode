@@ -40,6 +40,10 @@ class FileEvent(Trigger):
         else:
             return self.path
 
+    @property
+    def basename(self):
+        return os.path.basename(self.path)
+
     def __str__(self):
         return "{}{} {}[{}]{}".format(
             color(FG.green, style=Style.bold),
