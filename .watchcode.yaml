@@ -23,4 +23,4 @@ targets:
     task: default
 
 default_target: default
-log_all_events: false
+log: false

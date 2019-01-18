@@ -1,5 +1,6 @@
 from __future__ import division, print_function
 
+import logging
 import os
 import sys
 import subprocess
@@ -7,6 +8,8 @@ import threading
 import time
 
 from colors import color, FG, BG, Style
+
+logger = logging.getLogger(__name__)
 
 
 class ExecInfo(object):
@@ -58,7 +61,8 @@ class IOHandler(object):
             t2 = time.time()
             exec_infos.append(ExecInfo(command, t2 - t1, retcode))
 
-        self.on_thread_finished(exec_infos)
+        self.report_build_result(exec_infos)
+        self.on_thread_finished()
         return
 
     def _log_event_stdout(self, matches, event):
@@ -98,6 +102,7 @@ class IOHandler(object):
         with self.lock:
             # If we have no build running already...
             if self.thread is None:
+                logger.info("Build: starting thread")
                 #self._log_event_stdout(matches, event)
                 self.thread = threading.Thread(target=self._thread_func, args=(launch_info,))
                 self.thread.start()
@@ -105,44 +110,50 @@ class IOHandler(object):
             # If we have a build in progress...
             else:
                 #self._log_event_hidden(matches, event)
+                logger.info("Build: queued thread (build still in progress)")
                 if queue_trigger:
                     self.queued = launch_info
 
-    def on_thread_finished(self, exec_infos):
-        with self.lock:
-            print(" * Task summary:")
-            all_good = True
-            for exec_info in exec_infos:
-                if exec_info.retcode == 0:
-                    return_color = FG.green
-                else:
-                    return_color = FG.red
-                    all_good = False
-                print("   {}{}{} took {}{:.1f}{} sec and returned {}{}{}.".format(
-                    color(FG.blue, style=Style.bold),
-                    exec_info.command,
-                    color(),
-                    color(FG.yellow, style=Style.bold),
-                    exec_info.runtime,
-                    color(),
-                    color(return_color, style=Style.bold),
-                    exec_info.retcode,
-                    color(),
-                ))
-            print(" * Monitoring '{}' for changes... [Press <CTRL>+C to exit, <ENTER> to re-run]".format(self.working_dir))
-
-            if all_good:
-                snd_file = os.path.join(os.path.dirname(__file__), "sounds", "456581__bumpelsnake__nameit5.wav")
+    def report_build_result(self, exec_infos):
+        print(" * Task summary:")
+        all_good = True
+        for exec_info in exec_infos:
+            if exec_info.retcode == 0:
+                return_color = FG.green
             else:
-                snd_file = os.path.join(os.path.dirname(__file__), "sounds", "377017__elmasmalo1__notification-pop.wav")
-            p = subprocess.Popen(["ffplay", "-nodisp", "-autoexit", "-hide_banner", snd_file], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            p.wait()
+                return_color = FG.red
+                all_good = False
+            print("   {}{}{} took {}{:.1f}{} sec and returned {}{}{}.".format(
+                color(FG.blue, style=Style.bold),
+                exec_info.command,
+                color(),
+                color(FG.yellow, style=Style.bold),
+                exec_info.runtime,
+                color(),
+                color(return_color, style=Style.bold),
+                exec_info.retcode,
+                color(),
+            ))
+        print(" * Monitoring '{}' for changes... [Press <CTRL>+C to exit, <ENTER> to re-run]".format(self.working_dir))
+
+        if all_good:
+            snd_file = os.path.join(os.path.dirname(__file__), "sounds", "456581__bumpelsnake__nameit5.wav")
+        else:
+            snd_file = os.path.join(os.path.dirname(__file__), "sounds", "377017__elmasmalo1__notification-pop.wav")
+        p = subprocess.Popen(["ffplay", "-nodisp", "-autoexit", "-hide_banner", snd_file], stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE)
+        p.wait()
+
+    def on_thread_finished(self):
+        with self.lock:
+            logger.info("Build: finished")
 
             # Reset the thread state
             self.thread = None
 
             # Relaunch and reset queue state
             if self.queued is not None:
+                logger.info("Build: starting thread (from queued trigger)")
                 launch_info = self.queued
                 self.thread = threading.Thread(target=self._thread_func, args=(launch_info,))
                 self.thread.start()

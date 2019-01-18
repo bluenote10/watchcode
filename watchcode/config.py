@@ -28,7 +28,7 @@ class KN(object):
     task = "task"
 
     default_target = "default_target"
-    log_all_events = "log_all_events"
+    log = "log"
 
 
 class FileSet(object):
@@ -89,10 +89,10 @@ class Target(object):
 
 
 class Config(object):
-    def __init__(self, targets, default_target, log_all_events):
+    def __init__(self, targets, default_target, log):
         self.targets = targets
         self.default_target = default_target
-        self.log_all_events = log_all_events
+        self.log = log
 
     def get_target(self, override_target):
         if override_target is not None:
@@ -229,7 +229,7 @@ def load_config(working_directory):
         targets[target_name] = Target(fileset, task)
 
     default_target = safe_key_extract(config_data, KN.default_target, "Config")
-    log_all_events = safe_key_extract(config_data, KN.log_all_events, "Config", InstanceCheckerBool)
+    log = safe_key_extract(config_data, KN.log, "Config", InstanceCheckerBool)
 
-    return Config(targets, default_target, log_all_events)
+    return Config(targets, default_target, log)
 

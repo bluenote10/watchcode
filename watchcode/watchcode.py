@@ -159,15 +159,20 @@ def parse_args():
 
     if args.log:
         log_file = os.path.join(args.dir, '.watchcode.log')
-        formatter = logging.Formatter(
-            fmt='%(asctime)s.%(msecs)03d | %(levelname)-8s | %(message)s',
-            datefmt='%H:%M:%S')
-        handler = logging.FileHandler(log_file, mode='w')
-        handler.setFormatter(formatter)
-        logger.setLevel(logging.INFO)
-        logger.addHandler(handler)
-        #logger.addHandler(screen_handler)
-        #logging.basicConfig(level=logging.INFO)
+        #formatter = logging.Formatter(
+        #    fmt='%(asctime)s.%(msecs)03d | %(levelname)-8s | %(message)s',
+        #    datefmt='%H:%M:%S')
+        #stream_handler = logging.FileHandler(log_file, mode='w')
+        #stream_handler.setFormatter(formatter)
+        #logger.setLevel(logging.INFO)
+        #logger.addHandler(handler)
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s.%(msecs)03d | %(levelname)-8s | %(message)s',
+            datefmt='%H:%M:%S',
+            filename=log_file,
+            filemode="w",
+        )
     return args
 
 
