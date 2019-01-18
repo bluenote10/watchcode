@@ -55,13 +55,25 @@ class FileEvent(Trigger):
 
     @property
     def components(self):
-        return self.path.split(os.sep)
+        return [d for d in self.path.split(os.sep) if d != "."]
+
+    @property
+    def components_is_dir(self):
+        result = [True] * len(self.components)
+        if not self.is_dir:
+            result[-1] = False
+        return result
+
+    @property
+    def directories(self):
+        if self.is_dir:
+            dirs = self.path.split(os.sep)
+        else:
+            dirs = self.path.split(os.sep)[:-1]
+        return [d for d in dirs if d != "."]
 
     @property
     def is_config_file(self):
         comps = self.components
         # TODO: requires case insensitive matching for Windows
-        return (
-            (len(comps) == 1 and comps[0] == DEFAULT_CONFIG_FILENAME) or
-            (len(comps) == 2 and comps[1] == DEFAULT_CONFIG_FILENAME)
-        )
+        return len(comps) == 1 and comps[0] == DEFAULT_CONFIG_FILENAME
