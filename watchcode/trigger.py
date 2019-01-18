@@ -54,7 +54,14 @@ class FileEvent(Trigger):
         )
 
     @property
+    def components(self):
+        return self.path.split(os.sep)
+
+    @property
     def is_config_file(self):
-        path_components = os.path.split(self.path)
+        comps = self.components
         # TODO: requires case insensitive matching for Windows
-        return len(path_components) == 2 and path_components[1] == DEFAULT_CONFIG_FILENAME
+        return (
+            (len(comps) == 1 and comps[0] == DEFAULT_CONFIG_FILENAME) or
+            (len(comps) == 2 and comps[1] == DEFAULT_CONFIG_FILENAME)
+        )

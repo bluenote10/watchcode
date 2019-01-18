@@ -7,30 +7,35 @@ import re
 import subprocess
 
 
-def matcher_fnmatch(path, pattern, is_dir):
-    if is_dir:
+def matcher_fnmatch(pattern, event):
+    if event.is_dir:
         return False
-    basename = os.path.basename(path)
+    basename = os.path.basename(event.path)
     return fnmatch.fnmatchcase(basename, pattern)
 
 
-def matcher_re(path, pattern, is_dir):
-    m = re.search(pattern, path)
+def matcher_re(pattern, event):
+    m = re.search(pattern, event.path)
     return m is not None
 
 
-def matcher_gitlike(path, pattern, is_dir):
-    if is_dir and path[-1] != os.path.sep:
-        path = path + os.path.sep
+def matcher_gitlike(pattern, event):
+    GITIGNORE_SEP = "/"
 
-    #comps = path.split(os.sep)
+    pattern_is_absolute = pattern.startswith(GITIGNORE_SEP)
+    pattern_components = pattern.split(GITIGNORE_SEP)
 
-    basename = os.path.basename(path)
-    filename_match = fnmatch.fnmatchcase(basename, pattern)
-    return filename_match or pattern in path
+    if len(pattern_components) >= 2 and pattern_components[-1] == "":
+        file_pattern = pattern_components[-2]
+    else:
+        file_pattern = pattern_components[-1]
+
+    filename_match = fnmatch.fnmatchcase(event.basename, file_pattern)
+    return filename_match or pattern in event.path_normalized
 
 
 def is_gitignore(path):
+    # TODO: needs working directory?
 
     # `git check-ignore` does not return an ignore status for
     # files under `.git` itself. We need special handling for

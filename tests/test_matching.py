@@ -1,46 +1,54 @@
 from __future__ import division, print_function
 
 import os
+from watchcode.trigger import FileEvent
 from watchcode.matching import matcher_fnmatch, matcher_re, matcher_gitlike, is_gitignore
+
+
+def define_matches_and_differs(func):
+
+    def matches(pattern, path, is_dir=False):
+        event = FileEvent(path, "modified", is_dir)
+        assert func(pattern, event), \
+            "pattern '{}' must match path: '{}'".format(pattern, path)
+
+    def differs(pattern, path, is_dir=False):
+        event = FileEvent(path, "modified", is_dir)
+        assert not func(pattern, event), \
+            "pattern '{}' must NOT match path: '{}'".format(pattern, path)
+
+    return matches, differs
 
 
 def test_fnmatch():
 
-    def matches(path, pattern, is_dir=False):
-        assert matcher_fnmatch(path, pattern, is_dir)
+    matches, differs = define_matches_and_differs(matcher_fnmatch)
 
-    def differs(path, pattern, is_dir=False):
-        assert not matcher_fnmatch(path, pattern, is_dir)
+    matches("*.py", "test.py")
+    differs("*.xx", "test.py", )
+    matches("*.py", "./.test.py")
+    differs("*.txt", "./.test.py")
 
-    matches("test.py", "*.py")
-    differs("test.py", "*.txt")
-    matches("./.test.py", "*.py")
-    differs("./.test.py", "*.txt")
-
-    differs("test.pyyy", "*.py")
+    differs("*.py", "test.pyyy")
 
     # don't match on directories
-    differs(".", "*", is_dir=True)
-    differs("./subdirectory", "*", is_dir=True)
+    differs("*", ".", is_dir=True)
+    differs("*", "./subdirectory", is_dir=True)
 
 
 def test_re():
 
-    def matches(path, pattern):
-        assert matcher_re(path, pattern, None)
+    matches, differs = define_matches_and_differs(matcher_re)
 
-    def differs(path, pattern):
-        assert not matcher_re(path, pattern, None)
-
-    matches("test.py", r".*\.py")
-    differs("test.py", r".*\.txt")
-    matches("./test.py", r".*\.py")
-    differs("./test.py", r".*\.txt")
+    matches(r".*\.py", "test.py")
+    differs(r".*\.txt", "test.py")
+    matches(r".*\.py", "./test.py")
+    differs(r".*\.txt", "./test.py")
 
     # Because we use re.search and not re.match...
     # Is this the preferred behavior?
-    matches("test.pyyy", r".*\.py")
-    differs("test.pyyy", r".*\.py$")
+    matches(r".*\.py", "test.pyyy")
+    differs(r".*\.py$", "test.pyyy")
 
 
 def verify_gitignore_rules(matches, differs):
@@ -74,7 +82,7 @@ def verify_gitignore_rules(matches, differs):
 
 def test_gitlike(tmpdir):
     with tmpdir.as_cwd():
-        os.system("git init")
+        os.system("git init --quiet")
 
     def reference(path, pattern, is_dir):
         with tmpdir.as_cwd():
@@ -83,13 +91,8 @@ def test_gitlike(tmpdir):
             #res = os.system("git ")
             return is_gitignore(path)
 
-    def matches(pattern, path, is_dir=False):
-        assert matcher_gitlike(path, pattern, is_dir)
-
-    def differs(pattern, path, is_dir=False):
-        assert not matcher_gitlike(path, pattern, is_dir)
-
-    #verify_gitignore_rules(matches, differs)
+    matches, differs = define_matches_and_differs(matcher_gitlike)
+    verify_gitignore_rules(matches, differs)
 
 
 def test_is_gitignore(tmpdir):

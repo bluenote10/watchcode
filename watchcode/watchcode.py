@@ -81,7 +81,7 @@ class EventHandler(FileSystemEventHandler):
         if self.target is None or self.config is None:
             return
 
-        matches = self.target.fileset.matches(event.path, event.type, event.is_dir)
+        matches = self.target.fileset.matches(event)
 
         # There is one exception we should make for logging: We should not log
         # changes to '.watchcode.log' otherwise a log event would trigger yet

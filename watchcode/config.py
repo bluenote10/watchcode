@@ -48,25 +48,25 @@ class FileSet(object):
             print("Unknown match mode: '{}'".format(match_mode))
             sys.exit(1)
 
-    def matches(self, path, event_type, is_dir):
+    def matches(self, event):
         # TODO return an object that stores which of the
         # three cases was applied, with additional infos
 
         matches = False
         for pattern in self.patterns_incl:
-            if self.matcher(path, pattern, is_dir):
+            if self.matcher(pattern, event):
                 matches = True
                 break
 
         if matches:
             for pattern in self.patterns_excl:
-                if self.matcher(path, pattern, is_dir):
+                if self.matcher(pattern, event):
                     matches = False
                     break
 
         if matches:
             if self.exclude_gitignore:
-                if matching.is_gitignore(path):
+                if matching.is_gitignore(event.path):
                     matches = False
 
         #if matches:
