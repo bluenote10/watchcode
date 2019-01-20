@@ -7,7 +7,7 @@ import subprocess
 import threading
 import time
 
-from colors import color, FG, BG, Style
+from .colors import color, FG, BG, Style
 
 logger = logging.getLogger(__name__)
 
@@ -20,10 +20,9 @@ class ExecInfo(object):
 
 
 class LaunchInfo(object):
-    def __init__(self, trigger, commands, clear_screen, config_reloaded):
+    def __init__(self, trigger, task, config_reloaded):
         self.trigger = trigger
-        self.commands = commands
-        self.clear_screen = clear_screen
+        self.task = task
         self.config_reloaded = config_reloaded
 
 
@@ -42,12 +41,12 @@ class IOHandler(object):
     def _thread_func(self, launch_info):
         exec_infos = []
 
-        if launch_info.clear_screen:
+        if launch_info.task.clear_screen:
             self._clear_screen()
 
         print(" * Trigger: {}".format(launch_info.trigger))
 
-        for command in launch_info.commands:
+        for command in launch_info.task.commands:
             print(" * Running: {}{}{}".format(
                 color(FG.blue, style=Style.bold),
                 command,
@@ -65,53 +64,18 @@ class IOHandler(object):
         self.on_thread_finished()
         return
 
-    def _log_event_stdout(self, matches, event):
-        print(self._log_msg(matches, event))
-        sys.stdout.flush()
-
-    def _log_event_hidden(self, matches, event):
-        self.hidden_messages.append(self._log_msg(matches, event))
-
-    """
-    def trigger(self, matches, event, commands, log_all, queue_trigger, clear_screen):
-        with self.lock:
-            # If we have no build running already...
-            if self.thread is None:
-                if matches:
-                    if clear_screen:
-                        self._clear_screen()
-                    self._log_event_stdout(matches, event)
-                    self.thread = threading.Thread(target=self._thread_func, args=(commands, clear_screen))
-                    self.thread.start()
-                else:
-                    if log_all:
-                        self._log_event_stdout(matches, event)
-
-            # If we have a build in progress...
-            else:
-                if matches:
-                    self._log_event_hidden(matches, event)
-                    if queue_trigger:
-                        self.queued = commands
-                else:
-                    if log_all:
-                        self._log_event_hidden(matches, event)
-    """
-
-    def trigger(self, launch_info, queue_trigger):
+    def trigger(self, launch_info):
         with self.lock:
             # If we have no build running already...
             if self.thread is None:
                 logger.info("Build: starting thread")
-                #self._log_event_stdout(matches, event)
                 self.thread = threading.Thread(target=self._thread_func, args=(launch_info,))
                 self.thread.start()
 
             # If we have a build in progress...
             else:
-                #self._log_event_hidden(matches, event)
                 logger.info("Build: queued thread (build still in progress)")
-                if queue_trigger:
+                if launch_info.task.queue_events:
                     self.queued = launch_info
 
     def report_build_result(self, exec_infos):
@@ -160,20 +124,6 @@ class IOHandler(object):
                 self.queued = None
 
             sys.stdout.flush()
-
-    @staticmethod
-    def _log_msg(matches, event):
-        if matches:
-            col = FG.green
-        else:
-            col = FG.red
-        return " * Event: {}{:<15s}{}{:s}{}".format(
-            color(FG.white, style=Style.bold),
-            event.type,
-            color(col, style=Style.bold),
-            event.path,
-            color(),
-        )
 
     @staticmethod
     def _clear_screen():

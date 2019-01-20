@@ -90,13 +90,10 @@ class EventHandler(FileSystemEventHandler):
         if matches:
             launch_info = LaunchInfo(
                 trigger=event,
-                commands=self.task.task.commands,
-                clear_screen=self.task.task.clear_screen,
+                task=self.task,
                 config_reloaded=config_reloaded,
             )
-            self.io_handler.trigger(
-                launch_info, queue_trigger=self.task.task.queue_events,
-            )
+            self.io_handler.trigger(launch_info)
 
     def on_manual_trigger(self, is_initial=False):
         if is_initial:
@@ -109,13 +106,10 @@ class EventHandler(FileSystemEventHandler):
 
         launch_info = LaunchInfo(
             trigger=trigger,
-            commands=self.task.commands,
-            clear_screen=self.task.clear_screen,
+            task=self.task,
             config_reloaded=False,
         )
-        self.io_handler.trigger(
-            launch_info, queue_trigger=self.task.queue_events,
-        )
+        self.io_handler.trigger(launch_info)
 
 
 def parse_args():

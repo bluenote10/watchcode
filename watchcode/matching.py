@@ -21,7 +21,7 @@ def matcher_re(pattern, event):
     m = re.search(pattern, event.path)
     return m is not None
 
-
+"""
 def directories_match_absolute(dirs_event, dirs_pattern):
     if len(dirs_event) != len(dirs_pattern):
         return False
@@ -95,6 +95,7 @@ def matcher_gitlike_attempt1(pattern, event):
     #if pattern_is_absolute:
 
     return filename_match or pattern in event.path_normalized
+"""
 
 
 def matcher_gitlike(pattern, event):
