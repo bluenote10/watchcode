@@ -11,16 +11,12 @@ filesets:
 
 tasks:
   default:
+    fileset: default
     commands:
-      - "py.test"
+      - "py.test -s"
     clear_screen: true
     queue_events: false
 
 
-targets:
-  default:
-    fileset: default
-    task: default
-
-default_target: default
+default_task: default
 log: false

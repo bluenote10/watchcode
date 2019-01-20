@@ -1,6 +1,7 @@
 six
 watchdog>=0.9.0
 pyyaml>=3.0
+schema>=0.6
 
 # test requirements
 pytest

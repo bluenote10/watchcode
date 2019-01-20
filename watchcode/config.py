@@ -6,6 +6,7 @@ import yaml
 
 import matching
 
+from schema import Schema, And, Use, Optional
 
 DEFAULT_CONFIG_FILENAME = ".watchcode.yaml"
 
@@ -73,6 +74,25 @@ class FileSet(object):
         #    import IPython; IPython.embed()
         return matches
 
+    # @staticmethod
+    # def get_schema():
+    schema = Schema({
+        "include": [str],
+        "exclude": [str],
+        "exclude_gitignore": bool,
+        "match_mode": str,
+    })
+
+    @staticmethod
+    def validate(data):
+        validated = FileSet.schema.validate(data)
+        return FileSet(
+            patterns_incl=validated["include"],
+            patterns_excl=validated["exclude"],
+            match_mode=validated["match_mode"],
+            exclude_gitignore=validated["exclude_gitignore"],
+        )
+
 
 class Task(object):
     def __init__(self, commands, clear_screen, queue_events):
@@ -104,6 +124,29 @@ class Config(object):
             raise ConfigError("Target name '{}' is not defined.".format(target_name))
 
         return self.targets[target_name]
+
+    #@staticmethod
+    #def get_schema():
+    schema = Schema({
+        "filesets": {str: Use(FileSet.validate)},
+        "targets": {str: object},
+        "tasks": {str: object},
+        "default_target": str,
+        "log": bool,
+    })
+
+    @staticmethod
+    def validate(data):
+        validated = Config.schema.validate(data)
+
+        # TODO: conversion
+        import IPython; IPython.embed()
+
+        return Config(
+            targets=validated["targets"],
+            default_target=validated["default_target"],
+            log=validated["log"],
+        )
 
 
 class ConfigError(Exception):
@@ -205,6 +248,38 @@ def load_config(working_directory):
             DEFAULT_CONFIG_FILENAME, str(e)
         ))
         sys.exit(1)
+
+    schema_fileset = object
+
+    """
+    schema = Schema({
+        #'name': And(str, len),
+        #'age':  And(Use(int), lambda n: 18 <= n <= 99),
+        #Optional('gender'): And(str, Use(str.lower), lambda s: s in ('squid', 'kid'))
+        "filesets": Schema({str: Use(FileSet.validate)}),
+        "targets": object,
+        "tasks": object,
+
+        "default_target": str,
+        "log": bool,
+    })
+    data = [{'name': 'Sue', 'age': '28', 'gender': 'Squid'},{'name': 'Sam', 'age': '42'},{'name': 'Sacha', 'age': '20', 'gender': 'KID'}]
+    validated = schema.validate(config_data)
+    print(validated)
+    #import IPython; IPython.embed()
+    """
+
+    schema = Schema(Use(Config.validate))
+    validated = schema.validate(config_data)
+    print(validated)
+    """
+    try:
+        validated = schema.validate(config_data)
+    print(validated)
+    except Exception as e:
+        import IPython; IPython.embed()
+    """
+    sys.exit(0)
 
     filesets_dict = safe_key_extract(config_data, KN.filesets, "Config")
     tasks_dict = safe_key_extract(config_data, KN.tasks, "Config")
