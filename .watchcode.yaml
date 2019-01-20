@@ -17,6 +17,5 @@ tasks:
     clear_screen: true
     queue_events: false
 
-
 default_task: default
 log: false

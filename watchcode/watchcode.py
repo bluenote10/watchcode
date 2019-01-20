@@ -25,7 +25,7 @@ import re
 #from watchcode.io_handler import IOHandler
 from . import templates
 from .io_handler import LaunchInfo, IOHandler
-from .config import FileSet, Task, Target, load_config, DEFAULT_CONFIG_FILENAME
+from .config import FileSet, Task, load_config, DEFAULT_CONFIG_FILENAME
 from .trigger import InitialTrigger, ManualTrigger, FileEvent
 
 logger = logging.getLogger(__name__)
@@ -190,12 +190,6 @@ def main():
             print(" * Creating config file '{}'.".format(config_path))
             with open(config_path, "w") as f:
                 f.write(args.init_config)
-
-    # TODO: Should we actually run the task once initially?
-    # But then the above message would not make sense and we would never get a chance to
-    # print the CTRL+C message. Well after a build, if no new one is scheduled...
-    # Note that this would affect the "triggering events" semantics, because this initial
-    # build would not have an explicit trigger. Maybe we simply have to use multiple types.
 
     event_handler = EventHandler(working_dir, override_target=args.target)
     event_handler.on_manual_trigger(is_initial=True)

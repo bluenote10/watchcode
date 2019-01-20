@@ -1,14 +1,21 @@
 from __future__ import division, print_function
 
+import functools
 import os
 import sys
 import yaml
 
+
 import matching
 
-from schema import Schema, And, Use, Optional
+from schema import Schema, And, Use, Optional, SchemaError
 
 DEFAULT_CONFIG_FILENAME = ".watchcode.yaml"
+
+
+def map_dict_values(d, func):
+    """ Syntax convenience """
+    return {k: func(v) for k, v in d.items()}
 
 
 class KN(object):
@@ -53,6 +60,8 @@ class FileSet(object):
         # TODO return an object that stores which of the
         # three cases was applied, with additional infos
 
+        # TODO this function should be move to matching module
+
         matches = False
         for pattern in self.patterns_incl:
             if self.matcher(pattern, event):
@@ -74,18 +83,15 @@ class FileSet(object):
         #    import IPython; IPython.embed()
         return matches
 
-    # @staticmethod
-    # def get_schema():
-    schema = Schema({
-        "include": [str],
-        "exclude": [str],
-        "exclude_gitignore": bool,
-        "match_mode": str,
-    })
-
     @staticmethod
     def validate(data):
-        validated = FileSet.schema.validate(data)
+        schema = Schema({
+            "include": [str],
+            "exclude": [str],
+            "exclude_gitignore": bool,
+            "match_mode": str,
+        })
+        validated = schema.validate(data)
         return FileSet(
             patterns_incl=validated["include"],
             patterns_excl=validated["exclude"],
@@ -95,56 +101,70 @@ class FileSet(object):
 
 
 class Task(object):
-    def __init__(self, commands, clear_screen, queue_events):
+    def __init__(self, fileset, commands, clear_screen, queue_events):
+        self.fileset = fileset
         self.commands = commands
         self.clear_screen = clear_screen
         self.queue_events = queue_events
 
-
-class Target(object):
-    """ A Target combines a FileSet with a Task """
-    def __init__(self, fileset, task):
-        self.fileset = fileset
-        self.task = task
+    @staticmethod
+    def validate(data):
+        schema = Schema({
+            "fileset": str,
+            "commands": [str],
+            "clear_screen": bool,
+            "queue_events": bool,
+        })
+        validated = schema.validate(data)
+        return Task(
+            fileset=validated["fileset"],
+            commands=validated["commands"],
+            clear_screen=validated["clear_screen"],
+            queue_events=validated["queue_events"],
+        )
 
 
 class Config(object):
-    def __init__(self, targets, default_target, log):
-        self.targets = targets
-        self.default_target = default_target
+    def __init__(self, tasks, default_tasks, log):
+        self.tasks = tasks
+        self.default_task = default_tasks
         self.log = log
 
     def get_target(self, override_target):
         if override_target is not None:
             target_name = override_target
         else:
-            target_name = self.default_target
+            target_name = self.default_task
 
-        if target_name not in self.targets:
+        if target_name not in self.tasks:
             raise ConfigError("Target name '{}' is not defined.".format(target_name))
 
-        return self.targets[target_name]
-
-    #@staticmethod
-    #def get_schema():
-    schema = Schema({
-        "filesets": {str: Use(FileSet.validate)},
-        "targets": {str: object},
-        "tasks": {str: object},
-        "default_target": str,
-        "log": bool,
-    })
+        return self.tasks[target_name]
 
     @staticmethod
     def validate(data):
-        validated = Config.schema.validate(data)
+        schema = Schema({
+            "filesets": {str: Use(FileSet.validate)},
+            "tasks": {str: Use(Task.validate)},
+            "default_task": str,
+            "log": bool,
+        })  # name="Config"
+        #  upcoming schema version will support giving names to schemas
+        # => better error messages?
+        validated = schema.validate(data)
 
         # TODO: conversion
-        import IPython; IPython.embed()
+        if validated["default_task"] not in validated["tasks"]:
+            raise SchemaError(
+                "The value of 'default_task' ('{}') does not exist as a key in 'tasks' ({}).".format(
+                    validated["default_task"],
+                    ", ".join(["'{}'".format(x) for x in sorted(validated["tasks"].keys())]),
+                )
+            )
 
         return Config(
-            targets=validated["targets"],
-            default_target=validated["default_target"],
+            tasks=validated["tasks"],
+            default_tasks=validated["default_task"],
             log=validated["log"],
         )
 
@@ -153,62 +173,77 @@ class ConfigError(Exception):
     pass
 
 
-def verify_instance(x, type):
-    if not isinstance(x, type):
-        raise ValueError("wrong type")
+class CheckerStr(object):
+    name = "string"
 
-"""
-def instance_bool(x):
-    return isinstance(x, bool)
-
-
-def instance_list(x):
-    return isinstance(x, list)
+    @staticmethod
+    def check(x):
+        return isinstance(x, str), x
 
 
-def instance_dict(x):
-    return isinstance(x, dict)
-"""
-
-class InstanceCheckerBool(object):
+class CheckerBool(object):
     name = "bool"
 
     @staticmethod
     def check(x):
-        return isinstance(x, bool)
+        return isinstance(x, bool), x
 
 
-def safe_key_extract(data, key, what, instance_checker=None):
-    if not isinstance(data, dict):
-        print("Error: {} must be a dictionary, but got: {}".format(what, data))
-        sys.exit(0)
-    if key not in data:
-        print("Error: {} must contain key '{}'.".format(what, key))
-        sys.exit(0)
-    else:
-        value = data[key]
-        if instance_checker is not None:
-            if not instance_checker.check(value):
+class CheckerDict(object):
+    name = "dict"
+
+    @staticmethod
+    def check(x):
+        return isinstance(x, dict), x
+
+
+class CheckerListOfStr(object):
+    name = "list of strings"
+
+    @staticmethod
+    def check(x):
+        # The YAML parser returns None when lists are unspecified in the YAML.
+        # It's more convenient to convert that into empty lists.
+        if x is None:
+            return True, []
+        else:
+            if not isinstance(x, list):
+                return False, x
+            else:
+                all_str = all([isinstance(element, str) for element in x])
+                return all_str, x
+
+
+class SafeKeyExtractor(object):
+
+    def __init__(self, data, what):
+        self.data = data
+        self.what = what
+
+    def __call__(self, key, checker):
+        if not isinstance(self.data, dict):
+            print("Error: {} must be a dictionary, but got: {}".format(self.what, self.data))
+            sys.exit(0)
+        if key not in self.data:
+            print("Error: {} must contain key '{}'.".format(self.what, key))
+            sys.exit(0)
+        else:
+            value = self.data[key]
+            is_valid, value_validated = checker.check(value)
+            if not is_valid:
                 raise ConfigError("{} must contain key '{}' with a value of type {}, but got: {}".format(
-                    what, key, instance_checker.name, data,
+                    self.what, key, checker.name, value,
                 ))
-        return value
+            return value_validated
 
 
-def parse_fileset(fileset_data):
-    patterns_incl = safe_key_extract(fileset_data, KN.include, "File set")
-    patterns_excl = safe_key_extract(fileset_data, KN.exclude, "File set")
-    match_mode = safe_key_extract(fileset_data, KN.match_mode, "File set")
-    exclude_gitignore = safe_key_extract(fileset_data, KN.exclude_gitignore, "File set", InstanceCheckerBool)
+def parse_fileset(data):
+    extractor = SafeKeyExtractor(data, "File set")
+    patterns_incl = extractor(KN.include, CheckerListOfStr)
+    patterns_excl = extractor(KN.exclude, CheckerListOfStr)
+    match_mode = extractor(KN.match_mode, CheckerStr)   # TODO convert here
+    exclude_gitignore = extractor(KN.exclude_gitignore, CheckerBool)
 
-    # When the incl/excl lists are empty, the yaml parser returns None.
-    # We want empty lists in these cases.
-    if patterns_incl is None:
-        patterns_incl = []
-    if patterns_excl is None:
-        patterns_excl = []
-
-    # TODO check integrity of match mode here or just later?
     return FileSet(
         patterns_incl=patterns_incl,
         patterns_excl=patterns_excl,
@@ -217,20 +252,39 @@ def parse_fileset(fileset_data):
     )
 
 
-def parse_task(task_data):
-    commands = safe_key_extract(task_data, KN.commands, "Task")
-    clear_screen = safe_key_extract(task_data, KN.clear_screen, "Task", InstanceCheckerBool)
-    queue_events = safe_key_extract(task_data, KN.queue_events, "Task", InstanceCheckerBool)
+def parse_task(data, filesets):
+    extractor = SafeKeyExtractor(data, "Task")
 
-    if commands is None:
-        commands = []
+    fileset = extractor(KN.fileset, CheckerStr)
+    commands = extractor(KN.commands, CheckerListOfStr)
+    clear_screen = extractor(KN.clear_screen, CheckerBool)
+    queue_events = extractor(KN.queue_events, CheckerBool)
 
-    # TODO use checker
-    if not isinstance(commands, list):
-        print("Error: Commands must be a list, but got: {}".format(commands))
-        sys.exit(0)
+    # Lookup fileset in filesets dict
+    if fileset not in filesets:
+        raise ConfigError("Fileset '{}' does not exist. Detected file sets: {}".format(
+            fileset,
+            ", ".join(["'{}'".format(x) for x in sorted(filesets.keys())])
+        ))
 
-    return Task(commands, clear_screen, queue_events)
+    fileset = filesets[fileset]
+
+    return Task(fileset, commands, clear_screen, queue_events)
+
+
+def parse_config(data):
+    extractor = SafeKeyExtractor(data, "Config")
+
+    filesets_dict = extractor(KN.filesets, CheckerDict)
+    tasks_dict = extractor(KN.tasks, CheckerDict)
+    default_task = extractor("default_task", CheckerStr)
+    log = extractor(KN.log, CheckerBool)
+
+    # subparsers including consistency check
+    filesets = map_dict_values(filesets_dict, parse_fileset)
+    tasks = map_dict_values(tasks_dict, functools.partial(parse_task, filesets=filesets))
+
+    return Config(tasks, default_task, log)
 
 
 def load_config(working_directory):
@@ -248,8 +302,6 @@ def load_config(working_directory):
             DEFAULT_CONFIG_FILENAME, str(e)
         ))
         sys.exit(1)
-
-    schema_fileset = object
 
     """
     schema = Schema({
@@ -279,32 +331,7 @@ def load_config(working_directory):
     except Exception as e:
         import IPython; IPython.embed()
     """
-    sys.exit(0)
+    #sys.exit(0)
 
-    filesets_dict = safe_key_extract(config_data, KN.filesets, "Config")
-    tasks_dict = safe_key_extract(config_data, KN.tasks, "Config")
-    targets_dict = safe_key_extract(config_data, KN.targets, "Config")
-
-    targets = {}
-
-    for target_name, target in targets_dict.items():
-        fileset_name = safe_key_extract(target, KN.fileset, "Target")
-        task_name = safe_key_extract(target, KN.task, "Target")
-
-        if fileset_name not in filesets_dict:
-            print("Error: File set '{}' is not defined.".format(fileset_name))
-            sys.exit(1)
-        if task_name not in tasks_dict:
-            print("Error: Task '{}' is not defined.".format(task_name))
-            sys.exit(1)
-
-        fileset = parse_fileset(filesets_dict[fileset_name])
-        task = parse_task(tasks_dict[task_name])
-
-        targets[target_name] = Target(fileset, task)
-
-    default_target = safe_key_extract(config_data, KN.default_target, "Config")
-    log = safe_key_extract(config_data, KN.log, "Config", InstanceCheckerBool)
-
-    return Config(targets, default_target, log)
+    return parse_config(config_data)
 
