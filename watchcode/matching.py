@@ -149,7 +149,7 @@ def matcher_gitlike(pattern, event):
         # print(evt_comps, pattern_comps)
         i = 0
         while True:
-            print(i, evt_comps[i], pattern_comps[i])
+            # print(i, evt_comps[i], pattern_comps[i])
             if not fnmatch.fnmatch(evt_comps[i], pattern_comps[i]):
                 return False
             i += 1
@@ -205,3 +205,36 @@ def is_gitignore(path):
         else:
             warning += "."
         # TODO communicate warning
+
+
+def does_match(fileset, event):
+    # TODO return an object that stores which of the
+    # three cases was applied, with additional infos
+
+    matches = False
+    for pattern in fileset.patterns_incl:
+        if fileset.matcher(pattern, event):
+            matches = True
+            break
+
+    if matches:
+        for pattern in fileset.patterns_excl:
+            if fileset.matcher(pattern, event):
+                matches = False
+                break
+
+    if matches:
+        if fileset.exclude_gitignore:
+            if is_gitignore(event.path):
+                matches = False
+
+    #if matches:
+    #    import IPython; IPython.embed()
+    return matches
+
+
+AVAILABLE_MATCH_MODES = {
+    "fnmatch": matcher_fnmatch,
+    "re": matcher_re,
+    "gitlike": matcher_gitlike,
+}

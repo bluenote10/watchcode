@@ -12,20 +12,14 @@ import logging
 import sys
 import time
 import six
-import subprocess
-
-import yaml
 
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
-import fnmatch
-import re
-
-#from watchcode.io_handler import IOHandler
+from . import matching
 from . import templates
 from .io_handler import LaunchInfo, IOHandler
-from .config import FileSet, Task, load_config, DEFAULT_CONFIG_FILENAME
+from .config import Overrides, load_config, DEFAULT_CONFIG_FILENAME
 from .trigger import InitialTrigger, ManualTrigger, FileEvent
 
 logger = logging.getLogger(__name__)
@@ -34,20 +28,20 @@ logger = logging.getLogger(__name__)
 class EventHandler(FileSystemEventHandler):
     """ Watchcode's main event handler """
 
-    def __init__(self, working_dir, override_target):
+    def __init__(self, working_dir, overrides):
         self.working_dir = working_dir
-        self.override_target = override_target
+        self.overrides = overrides
 
         self.io_handler = IOHandler(working_dir)
 
         self.config = None
-        self.target = None
+        self.task = None
         self.load_config()
 
     def load_config(self):
         # TODO error handling
-        self.config = load_config(self.working_dir)
-        self.target = self.config.get_target(self.override_target)
+        self.config = load_config(self.working_dir, self.overrides)
+        self.task = self.config.task
 
     def on_any_event(self, event):
         super(EventHandler, self).on_any_event(event)
@@ -78,10 +72,10 @@ class EventHandler(FileSystemEventHandler):
             # Hm, what if we return early, actually impossible, still not so nice
             # to communicate the config_reloaded via the trigger below?
 
-        if self.target is None or self.config is None:
+        if self.task is None or self.config is None:
             return
 
-        matches = self.target.fileset.matches(event)
+        matches = matching.does_match(self.task.fileset, event)
 
         # There is one exception we should make for logging: We should not log
         # changes to '.watchcode.log' otherwise a log event would trigger yet
@@ -96,12 +90,12 @@ class EventHandler(FileSystemEventHandler):
         if matches:
             launch_info = LaunchInfo(
                 trigger=event,
-                commands=self.target.task.commands,
-                clear_screen=self.target.task.clear_screen,
+                commands=self.task.task.commands,
+                clear_screen=self.task.task.clear_screen,
                 config_reloaded=config_reloaded,
             )
             self.io_handler.trigger(
-                launch_info, queue_trigger=self.target.task.queue_events,
+                launch_info, queue_trigger=self.task.task.queue_events,
             )
 
     def on_manual_trigger(self, is_initial=False):
@@ -110,17 +104,17 @@ class EventHandler(FileSystemEventHandler):
         else:
             trigger = ManualTrigger()
 
-        if self.target is None or self.config is None:
+        if self.task is None or self.config is None:
             return
 
         launch_info = LaunchInfo(
             trigger=trigger,
-            commands=self.target.task.commands,
-            clear_screen=self.target.task.clear_screen,
+            commands=self.task.commands,
+            clear_screen=self.task.clear_screen,
             config_reloaded=False,
         )
         self.io_handler.trigger(
-            launch_info, queue_trigger=self.target.task.queue_events,
+            launch_info, queue_trigger=self.task.queue_events,
         )
 
 
@@ -131,11 +125,11 @@ def parse_args():
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "target",
+        "task",
         default=None,
         nargs='?',
-        help="Run a specific target. By default, uses the default target setting "
-             "from the YAML config. If an explicit target is specified, the value "
+        help="Run a specific tasj. By default, uses the default task setting "
+             "from the YAML config. If an explicit task is specified, the value "
              "in the config is ignored.",
     )
     parser.add_argument(
@@ -176,8 +170,15 @@ def parse_args():
     return args
 
 
+def extract_overrides(args):
+    return Overrides(
+        task=args.task,
+    )
+
+
 def main():
     args = parse_args()
+    overrides = extract_overrides(args)
     working_dir = args.dir
 
     if args.init_config is not None:
@@ -191,7 +192,7 @@ def main():
             with open(config_path, "w") as f:
                 f.write(args.init_config)
 
-    event_handler = EventHandler(working_dir, override_target=args.target)
+    event_handler = EventHandler(working_dir, overrides)
     event_handler.on_manual_trigger(is_initial=True)
 
     observer = Observer()
