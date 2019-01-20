@@ -3,4 +3,5 @@
 *.pyc
 .coverage
 *.egg-info/
+__pycache__/
 .watchcode.log
