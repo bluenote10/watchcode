@@ -10,6 +10,7 @@ import threading
 import time
 
 from .colors import color, FG, BG, Style
+from .config import ConfigError
 
 logger = logging.getLogger(__name__)
 
@@ -131,10 +132,11 @@ class ExecInfo(object):
 
 
 class LaunchInfo(object):
-    def __init__(self, trigger, task, config_reloaded):
+    def __init__(self, trigger, task, config_factory, on_build_finished):
         self.trigger = trigger
         self.task = task
-        self.config_reloaded = config_reloaded
+        self.config_factory = config_factory
+        self.on_build_finished = on_build_finished
 
 
 class IOHandler(object):
@@ -157,6 +159,20 @@ class IOHandler(object):
 
         print(" * Trigger: {}".format(launch_info.trigger))
 
+        try:
+            print(" * Reloading config")
+            config = launch_info.config_factory.load_config()
+        except ConfigError as e:
+            print(" * {}Error reloading config{}:\n{}".format(
+                color(FG.red),
+                color(),
+                str(e),
+            ))
+            # TODO: We should play the "failed build" sound here for consistency,
+            # TODO: which would mean to pull out the sound playing from _report_build_result
+            # TODO: and make it an explicit call here.
+            return
+
         for command in launch_info.task.commands:
             print(" * Running: {}{}{}".format(
                 color(FG.blue, style=Style.bold),
@@ -172,7 +188,7 @@ class IOHandler(object):
             exec_infos.append(ExecInfo(command, t2 - t1, retcode))
 
         self._report_build_result(exec_infos)
-        return
+        launch_info.on_build_finished(config)
 
     def _report_build_result(self, exec_infos):
         print(" * Task summary:")

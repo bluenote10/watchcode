@@ -230,3 +230,12 @@ def load_config(working_directory, overrides):
         ))
 
     return Config.validate(config_data, overrides)
+
+
+class ConfigFactory(object):
+    def __init__(self, working_directory, overrides):
+        self.working_directory = working_directory
+        self.overrides = overrides
+
+    def load_config(self):
+        return load_config(self.working_directory, self.overrides)

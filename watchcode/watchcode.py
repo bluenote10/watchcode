@@ -19,8 +19,9 @@ from watchdog.events import FileSystemEventHandler
 from . import matching
 from . import templates
 from .io_handler import LaunchInfo, IOHandler
-from .config import Overrides, load_config, DEFAULT_CONFIG_FILENAME
+from .config import Overrides, ConfigError, ConfigFactory, DEFAULT_CONFIG_FILENAME
 from .trigger import InitialTrigger, ManualTrigger, FileEvent
+from .colors import color, FG
 
 logger = logging.getLogger(__name__)
 
@@ -28,20 +29,26 @@ logger = logging.getLogger(__name__)
 class EventHandler(FileSystemEventHandler):
     """ Watchcode's main event handler """
 
-    def __init__(self, working_dir, overrides):
+    def __init__(self, working_dir, config_factory):
         self.working_dir = working_dir
-        self.overrides = overrides
+        self.config_factory = config_factory
+
+        self.config = self.initial_config_load()
+        self.task = self.config.task
 
         self.io_handler = IOHandler(working_dir)
 
-        self.config = None
-        self.task = None
-        self.load_config()
-
-    def load_config(self):
-        # TODO error handling
-        self.config = load_config(self.working_dir, self.overrides)
-        self.task = self.config.task
+    def initial_config_load(self):
+        try:
+            print(" * Loading config")
+            return self.config_factory.load_config()
+        except ConfigError as e:
+            print(" * {}Error reloading config{}:\n{}".format(
+                color(FG.red),
+                color(),
+                str(e),
+            ))
+            sys.exit(1)
 
     def on_any_event(self, event):
         super(EventHandler, self).on_any_event(event)
@@ -62,16 +69,6 @@ class EventHandler(FileSystemEventHandler):
 
     def handle_event(self, event):
 
-        # First attempt to reload config (in cases where we have none)
-        config_reloaded = False
-        if event.is_config_file:
-            logger.info("Reloading config...")
-            print(" * Reloading config") # TODO we must not log here... during builds...
-            self.load_config()
-            config_reloaded = True
-            # Hm, what if we return early, actually impossible, still not so nice
-            # to communicate the config_reloaded via the trigger below?
-
         if self.task is None or self.config is None:
             return
 
@@ -91,9 +88,15 @@ class EventHandler(FileSystemEventHandler):
             launch_info = LaunchInfo(
                 trigger=event,
                 task=self.task,
-                config_reloaded=config_reloaded,
+                config_factory=self.config_factory,
+                on_build_finished=self.on_build_finished,
             )
             self.io_handler.trigger(launch_info)
+
+    def on_build_finished(self, config):
+        print(" * Updating config...")
+        self.config = config
+        self.task = self.config.task
 
     def on_manual_trigger(self, is_initial=False):
         if is_initial:
@@ -107,7 +110,8 @@ class EventHandler(FileSystemEventHandler):
         launch_info = LaunchInfo(
             trigger=trigger,
             task=self.task,
-            config_reloaded=False,
+            config_factory=self.config_factory,
+            on_build_finished=self.on_build_finished,
         )
         self.io_handler.trigger(launch_info)
 
@@ -186,7 +190,8 @@ def main():
             with open(config_path, "w") as f:
                 f.write(args.init_config)
 
-    event_handler = EventHandler(working_dir, overrides)
+    config_factory = ConfigFactory(working_dir, overrides)
+    event_handler = EventHandler(working_dir, config_factory)
     event_handler.on_manual_trigger(is_initial=True)
 
     observer = Observer()
