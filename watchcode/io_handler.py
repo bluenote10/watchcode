@@ -132,11 +132,11 @@ class ExecInfo(object):
 
 
 class LaunchInfo(object):
-    def __init__(self, trigger, task, config_factory, on_build_finished):
+    def __init__(self, trigger, task, config_factory, on_task_finished):
         self.trigger = trigger
         self.task = task
         self.config_factory = config_factory
-        self.on_build_finished = on_build_finished
+        self.on_task_finished = on_task_finished
 
 
 class IOHandler(object):
@@ -188,7 +188,7 @@ class IOHandler(object):
             exec_infos.append(ExecInfo(command, t2 - t1, retcode))
 
         self._report_build_result(exec_infos)
-        launch_info.on_build_finished(config)
+        launch_info.on_task_finished(config)
 
     def _report_build_result(self, exec_infos):
         print(" * Task summary:")

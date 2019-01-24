@@ -26,96 +26,6 @@ from .colors import color, FG
 logger = logging.getLogger(__name__)
 
 
-class EventHandler(FileSystemEventHandler):
-    """ Watchcode's main event handler """
-
-    def __init__(self, working_dir, config_factory):
-        self.working_dir = working_dir
-        self.config_factory = config_factory
-
-        self.config = self.initial_config_load()
-        self.task = self.config.task
-
-        self.io_handler = IOHandler(working_dir)
-
-    def initial_config_load(self):
-        try:
-            print(" * Loading config")
-            return self.config_factory.load_config()
-        except ConfigError as e:
-            print(" * {}Error reloading config{}:\n{}".format(
-                color(FG.red),
-                color(),
-                str(e),
-            ))
-            sys.exit(1)
-
-    def on_any_event(self, event):
-        super(EventHandler, self).on_any_event(event)
-
-        # Convert into simplified representation to avoid special handling of dest_path
-        if event.event_type == "moved":
-            events = [
-                FileEvent(event.src_path, event.event_type + "_from", event.is_directory),
-                FileEvent(event.dest_path, event.event_type + "_to", event.is_directory),
-            ]
-        else:
-            events = [
-                FileEvent(event.src_path, event.event_type, event.is_directory),
-            ]
-
-        for event in events:
-            self.handle_event(event)
-
-    def handle_event(self, event):
-
-        if self.task is None or self.config is None:
-            return
-
-        matches = matching.does_match(self.task.fileset, event)
-
-        # There is one exception we should make for logging: We should not log
-        # changes to '.watchcode.log' otherwise a log event would trigger yet
-        # another change, creating a log loop.
-        if event.basename != ".watchcode.log":
-            logger.info(u"Event: {:<60s} {:<12} {}".format(
-                event.path_normalized,
-                event.type,
-                u"✓" if matches else u"○",
-            ))
-
-        if matches:
-            launch_info = LaunchInfo(
-                trigger=event,
-                task=self.task,
-                config_factory=self.config_factory,
-                on_build_finished=self.on_build_finished,
-            )
-            self.io_handler.trigger(launch_info)
-
-    def on_build_finished(self, config):
-        print(" * Updating config...")
-        self.config = config
-        self.task = self.config.task
-
-    def on_manual_trigger(self, is_initial=False):
-        if is_initial:
-            trigger = InitialTrigger()
-        else:
-            trigger = ManualTrigger()
-
-        if self.task is None or self.config is None:
-            return
-
-        launch_info = LaunchInfo(
-            trigger=trigger,
-            task=self.task,
-            config_factory=self.config_factory,
-            on_build_finished=self.on_build_finished,
-        )
-        self.io_handler.trigger(launch_info)
-
-
 def parse_args():
     template_names = ", ".join(
         sorted(templates.get_available_templates().keys())
@@ -172,6 +82,106 @@ def extract_overrides(args):
     return Overrides(
         task=args.task,
     )
+
+
+class EventHandler(FileSystemEventHandler):
+    """ Watchcode's main event handler """
+
+    def __init__(self, working_dir, config_factory):
+        self.working_dir = working_dir
+        self.config_factory = config_factory
+
+        self.config = self.initial_config_load()
+        self.task = self.config.task
+
+        self.io_handler = IOHandler(working_dir)
+
+    def initial_config_load(self):
+        try:
+            print(" * Loading config")
+            return self.config_factory.load_config()
+        except ConfigError as e:
+            print(" * {}Error reloading config{}:\n{}".format(
+                color(FG.red),
+                color(),
+                str(e),
+            ))
+            sys.exit(1)
+
+    def on_any_event(self, event):
+        """
+        Overrides EventHandler.on_any_event for general notifications.
+        The implementation convert the raw event into our own simplified
+        representation, which converts 'moved' event two separate events
+        in order to avoid special handling for event.dest_path.
+        """
+        super(EventHandler, self).on_any_event(event)
+
+        if event.event_type == "moved":
+            events = [
+                FileEvent(event.src_path, event.event_type + "_from", event.is_directory),
+                FileEvent(event.dest_path, event.event_type + "_to", event.is_directory),
+            ]
+        else:
+            events = [
+                FileEvent(event.src_path, event.event_type, event.is_directory),
+            ]
+
+        for event in events:
+            self.on_any_single_event(event)
+
+    def on_any_single_event(self, event):
+        """
+        Actual event handler.
+        """
+        matches = matching.does_match(self.task.fileset, event)
+
+        # There is one exception we should make for logging: We should not log
+        # changes to '.watchcode.log' otherwise a log event would trigger yet
+        # another change, creating a log loop.
+        if event.basename != ".watchcode.log":
+            logger.info(u"Event: {:<60s} {:<12} {}".format(
+                event.path_normalized,
+                event.type,
+                u"✓" if matches else u"○",
+            ))
+
+        if matches:
+            launch_info = LaunchInfo(
+                trigger=event,
+                task=self.task,
+                config_factory=self.config_factory,
+                on_task_finished=self.on_task_finished,
+            )
+            self.io_handler.trigger(launch_info)
+
+    def on_task_finished(self, config):
+        """
+        Callback for finished build.
+        """
+        print(" * Updating config...")
+        self.config = config
+        self.task = self.config.task
+
+    def on_manual_trigger(self, is_initial=False):
+        """
+        Interface for external triggers.
+        """
+        if is_initial:
+            trigger = InitialTrigger()
+        else:
+            trigger = ManualTrigger()
+
+        if self.task is None or self.config is None:
+            return
+
+        launch_info = LaunchInfo(
+            trigger=trigger,
+            task=self.task,
+            config_factory=self.config_factory,
+            on_task_finished=self.on_task_finished,
+        )
+        self.io_handler.trigger(launch_info)
 
 
 def main():
