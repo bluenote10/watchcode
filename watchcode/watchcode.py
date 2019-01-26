@@ -27,9 +27,7 @@ logger = logging.getLogger(__name__)
 
 
 def parse_args():
-    template_names = ", ".join(
-        sorted(templates.get_available_templates().keys())
-    )
+    template_names = ", ".join(templates.get_available_templates())
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -50,7 +48,7 @@ def parse_args():
         metavar="<TEMPLATE>",
         help="Create a new '.watchcode.yaml' config in the current working directory "
              "from a preset. Available templates: {}".format(template_names),
-        type=templates.validate_template,
+        type=templates.render_template,
     )
     parser.add_argument(
         "--log",
@@ -80,7 +78,7 @@ def parse_args():
 
 def extract_overrides(args):
     return Overrides(
-        task=args.task,
+        task_name=args.task,
     )
 
 

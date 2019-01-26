@@ -2,45 +2,85 @@ from __future__ import division, print_function
 
 import argparse
 import os
-import glob
 
 
-"""
 class Template(object):
-    def __init__(self, name, path):
-        self.name = name
-        self.path = path
-"""
+    def __init__(self, includes, excludes, commands):
+        self.includes = includes
+        self.excludes = excludes
+        self.commands = commands
+
+
+TEMPLATES = {
+    "python": Template(
+        includes=["*.py"],
+        excludes=["*.pyc", "__pycache__"],
+        commands=["py.test"],
+    ),
+    "nim": Template(
+        includes=["*.nim"],
+        excludes=[],
+        commands=["nim -r c src/main.nim"],
+    ),
+}
+
+
+def make_indented_yaml_list(l, indentation):
+    join_str = "\n" + (" " * indentation)
+    return join_str.join([
+        '- "{}"'.format(x) for x in l
+    ])
+
 
 def get_available_templates():
-    file_pattern = os.path.join(os.path.dirname(__file__), "templates", "*.yaml")
-
-    files = glob.glob(file_pattern)
-    available_templates = {
-        os.path.basename(f)[:-5]: f
-        for f in files
-    }
+    available_templates = TEMPLATES.keys()
+    available_templates += [
+        template_name + "_min" for template_name in TEMPLATES.keys()
+    ]
+    available_templates = sorted(available_templates)
 
     return available_templates
 
 
-"""
-def get_available_templates_names():
-    file_pattern = os.path.join(os.path.dirname(__file__), "templates", "*.yaml")
-
-    files = glob.glob(file_pattern)
-    available_templates = [os.path.basename(f)[:-5] for f in files]
-
-    return [t.name for t in get_available_templates()]
-"""
-
-
-def validate_template(name):
-    available_templates = get_available_templates()
-    if name in available_templates:
-        with open(available_templates[name]) as f:
-            return f.read()
+def get_template(template_name):
+    if template_name.endswith("_min"):
+        template_file = "minimal.yaml"
+        template = TEMPLATES[template_name[:-4]]
     else:
+        template_file = "full.yaml"
+        template = TEMPLATES[template_name]
+    return (
+        os.path.join(os.path.dirname(__file__), "templates", template_file),
+        template,
+    )
+
+
+def render_template(name):
+    # Note this function raises argparse.ArgumentTypeError because we use it
+    # directly in the argparsing.
+    try:
+        template_file, template = get_template(name)
+    except KeyError:
         raise argparse.ArgumentTypeError(
-            "Template name '{}' does not exist".format(name)
+            "Unknown template name '{}'.".format(name)
+        )
+
+    try:
+        with open(template_file) as f:
+            content = f.read()
+    except IOError as e:
+        raise argparse.ArgumentTypeError(
+            "Failed to load template file '{}':\n{}".format(template_file, str(e))
+        )
+
+    try:
+        content_rendered = content.format(
+            includes=make_indented_yaml_list(template.includes, 6),
+            excludes=make_indented_yaml_list(template.excludes, 6),
+            commands=make_indented_yaml_list(template.commands, 6),
+        )
+        return content_rendered
+    except (KeyError, IndexError) as e:
+        raise argparse.ArgumentTypeError(
+            "Failed to render template '{}' does not exist:\n{}".format(name, str(e))
         )

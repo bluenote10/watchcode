@@ -83,18 +83,21 @@ class SafeKeyExtractor(object):
         self.what = what
         self.checked_keys = set()
 
-    def __call__(self, key, checker):
+    def __call__(self, key, checker, default=None):
         self.checked_keys.add(key)
         if not isinstance(self.data, dict):
             raise ConfigError("{} must be a dictionary, but got: {}".format(
                 self.what.title(), self.data
             ))
-        if key not in self.data:
-            raise ConfigError("{} must contain key '{}'.".format(
-                self.what.title(), key
-            ))
         else:
-            value = self.data[key]
+            if key in self.data:
+                value = self.data[key]
+            elif default is not None:
+                value = default
+            else:
+                raise ConfigError("{} must contain key '{}'.".format(
+                    self.what.title(), key
+                ))
             is_valid, value_validated = checker(value)
             if not is_valid:
                 raise ConfigError("Key '{}' of {} must be {}, but got: {}".format(
@@ -130,8 +133,8 @@ class FileSet(object):
 
         patterns_incl = extractor("include", CheckerListOfStr())
         patterns_excl = extractor("exclude", CheckerListOfStr())
-        matcher = extractor("match_mode", CheckerMatchMode())
-        exclude_gitignore = extractor("exclude_gitignore", CheckerBool())
+        matcher = extractor("match_mode", CheckerMatchMode(), default="gitlike")
+        exclude_gitignore = extractor("exclude_gitignore", CheckerBool(), default=True)
 
         extractor.verify_no_extra_keys()
         return FileSet(
@@ -155,8 +158,8 @@ class Task(object):
 
         fileset = extractor("fileset", CheckerStr())
         commands = extractor("commands", CheckerListOfStr())
-        clear_screen = extractor("clear_screen", CheckerBool())
-        queue_events = extractor("queue_events", CheckerBool())
+        clear_screen = extractor("clear_screen", CheckerBool(), default=True)
+        queue_events = extractor("queue_events", CheckerBool(), default=False)
 
         # Lookup fileset in filesets dict
         if fileset not in filesets:
@@ -172,8 +175,8 @@ class Task(object):
 
 
 class Overrides(object):
-    def __init__(self, task):
-        self.task = task
+    def __init__(self, task_name=None):
+        self.task_name = task_name
 
 
 class Config(object):
@@ -183,10 +186,11 @@ class Config(object):
         self.default_task = default_tasks
         self.log = log
 
-    @property
-    def task(self):
-        if self.overrides.task is not None:
-            task_name = self.overrides.task
+        self.task = self.get_task()
+
+    def get_task(self):
+        if self.overrides.task_name is not None:
+            task_name = self.overrides.task_name
         else:
             task_name = self.default_task
 
@@ -202,7 +206,7 @@ class Config(object):
         filesets_dict = extractor("filesets", CheckerDict())
         tasks_dict = extractor("tasks", CheckerDict())
         default_task = extractor("default_task", CheckerStr())
-        log = extractor("log", CheckerBool())
+        log = extractor("log", CheckerBool(), default=True)
 
         # subparsers including consistency check
         filesets = map_dict_values(filesets_dict, FileSet.validate)
@@ -224,8 +228,8 @@ def load_config(working_directory, overrides):
     try:
         with open(config_path) as f:
             config_data = yaml.load(f)
-    except IOError as e:
-        raise ConfigError("Could not read/parse '{}', Error: {}".format(
+    except (IOError, yaml.YAMLError) as e:
+        raise ConfigError("Could not read/parse '{}':\n{}".format(
             DEFAULT_CONFIG_FILENAME, str(e)
         ))
 

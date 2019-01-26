@@ -1,7 +1,11 @@
-.idea/
-.eggs/
 *.pyc
-.coverage
+.eggs/
 *.egg-info/
 __pycache__/
+
+.idea/
+
+.coverage
+cov_html/
+
 .watchcode.log

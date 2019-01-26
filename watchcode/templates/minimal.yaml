@@ -2,18 +2,18 @@ filesets:
   default:
     include:
       - ".watchcode.yaml"
-      - "*.py"
-      - "*"
+      {includes}
     exclude:
       - ".watchcode.log"
+      {excludes}
     exclude_gitignore: true
-    match_mode: "fnmatch"
+    match_mode: "gitlike"
 
 tasks:
   default:
     fileset: default
     commands:
-      - "py.test tests/test_config.py"
+      {commands}
     clear_screen: true
     queue_events: false
 
