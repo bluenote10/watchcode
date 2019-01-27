@@ -68,16 +68,16 @@ class Debouncer(object):
             else:
                 break
         with self.lock:
-            self.status = "building"
-        logger.info(u"Build [---]: debounce wait finished, starting build")
+            self.status = "running"
+        logger.info(u"Task [---]: debounce wait finished, starting task")
         self.func()
-        logger.info("Build [▴▴▴]: finished")
+        logger.info("Task [▴▴▴]: finished")
         with self.lock:
             if self.queued is None:
                 self.status = None
                 self.thread = None
             else:
-                logger.info("Build [▾▾▾]: starting thread (from queued trigger)")
+                logger.info("Task [▾▾▾]: starting thread (from queued trigger)")
                 # unwrap / unset queued args
                 (func, debounce_time) = self.queued
                 self.queued = None
@@ -93,7 +93,7 @@ class Debouncer(object):
     def trigger(self, func, debounce_time, enqueue):
         with self.lock:
             if self.status is None:
-                logger.info(u"Build [▾▾▾]: starting thread")
+                logger.info(u"Task [▾▾▾]: starting thread")
                 # update trigger
                 self.trigger_time = datetime.datetime.now()
                 # update args
@@ -103,20 +103,20 @@ class Debouncer(object):
                 self.status = "waiting"
                 self.thread = self._start_thread()
             elif self.status == "waiting":
-                logger.info(u"Build [---]: debouncing event")
+                logger.info(u"Task [---]: debouncing event")
                 # update trigger
                 self.trigger_time = datetime.datetime.now()
                 # update args
                 self.func = func
                 self.debounce_time = debounce_time
                 # no status change
-            elif self.status == "building":
+            elif self.status == "running":
                 # update args (delayed)
                 if enqueue:
                     self.queued = (func, debounce_time)
-                    logger.info("Build [---]: still in progress => queuing trigger")
+                    logger.info("Task [---]: still in progress => queuing trigger")
                 else:
-                    logger.info("Build [---]: still in progress => discarding trigger")
+                    logger.info("Task [---]: still in progress => discarding trigger")
 
     def _start_thread(self):
         thread = threading.Thread(target=self._thread_func)
@@ -186,14 +186,14 @@ class IOHandler(object):
             t2 = time.time()
             exec_infos.append(ExecInfo(command, t2 - t1, retcode))
 
-        success = self._report_build_result(exec_infos)
+        success = self._report_task_result(exec_infos)
         if config.sound:
             self._notify_sound(success)
 
         # Return re-loaded config to monitoring thread
         launch_info.on_task_finished(config)
 
-    def _report_build_result(self, exec_infos):
+    def _report_task_result(self, exec_infos):
         print(" * Task summary:")
         success = True
         for exec_info in exec_infos:
