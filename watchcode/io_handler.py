@@ -181,7 +181,8 @@ class IOHandler(object):
             return
 
         for command in config.task.commands:
-            print(" * Running: {}{}{}".format(
+            # additional newline to separate from task output
+            print(" * Running: {}{}{}\n".format(
                 color(FG.blue, style=Style.bold),
                 command,
                 color()
@@ -208,7 +209,8 @@ class IOHandler(object):
         launch_info.on_task_finished(config)
 
     def _report_task_result(self, exec_infos):
-        print(" * Task summary:")
+        # additional newline to separate from task output
+        print("\n * Task summary:")
         success = True
         for exec_info in exec_infos:
             if exec_info.retcode == 0:

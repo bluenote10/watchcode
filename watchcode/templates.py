@@ -48,9 +48,9 @@ def make_indented_yaml_list(l, indentation):
 
 
 def get_available_templates():
-    available_templates = TEMPLATES.keys()
+    available_templates = list(TEMPLATES.keys())
     available_templates += [
-        template_name + "_min" for template_name in TEMPLATES.keys()
+        template_name + "_min" for template_name in list(TEMPLATES.keys())
     ]
     available_templates = sorted(available_templates)
 
