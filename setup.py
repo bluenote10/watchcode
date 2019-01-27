@@ -12,6 +12,7 @@ setup(
         "pytest",
         "pytest-cov",
     ],
+    py_modules=['watchcode'],
     license="MIT",
     author="Fabian Keller",
 )
