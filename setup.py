@@ -12,7 +12,7 @@ setup(
         "pytest",
         "pytest-cov",
     ],
-    py_modules=['watchcode'],
+    packages=['watchcode'],
     license="MIT",
     author="Fabian Keller",
 )
