@@ -31,14 +31,15 @@ Watchcode's makes it easy to get the right behavior by offering flexible matchin
 
 ## Demo
 
+![demo](/../examples/examples/python.gif)
 
 
 ## Installation
 
-For users familiar with Python:
+For users familiar with Python (I'll probably upload to PyPI soon):
 
 ```sh
-pip install watchcode
+pip install git+https://github.com/bluenote10/watchcode
 ```
 
 Not familiar with Python? Here's the gist:

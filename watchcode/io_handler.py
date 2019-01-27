@@ -229,7 +229,7 @@ class IOHandler(object):
                 exec_info.retcode,
                 color(),
             ))
-        print(" * Monitoring '{}' for changes... [Press <CTRL>+C to exit, <ENTER> to re-run]".format(self.working_dir))
+        print(" * Monitoring '{}' for changes... [Press <CTRL>+C to exit]".format(self.working_dir))
         sys.stdout.flush()
         return success
 
