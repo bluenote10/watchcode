@@ -175,8 +175,9 @@ class Task(object):
 
 
 class Overrides(object):
-    def __init__(self, task_name=None, sound=None):
+    def __init__(self, task_name=None, log=None, sound=None):
         self.task_name = task_name
+        self.log = log
         self.sound = sound
 
 
@@ -184,23 +185,24 @@ class Config(object):
     def __init__(self, overrides, tasks, default_task, log, sound):
         self.overrides = overrides
 
+        def with_override(value, override_value):
+            if override_value is None:
+                return value
+            else:
+                return override_value
+
         self.tasks = tasks
-        self.default_task = default_task
-        self.log = log
-        self.sound = sound
 
-        self.task = self.get_task()
+        self.default_task = with_override(default_task, overrides.task_name)
+        self.log = with_override(log, overrides.log)
+        self.sound = with_override(sound, overrides.sound)
 
-    def get_task(self):
-        if self.overrides.task_name is not None:
-            task_name = self.overrides.task_name
-        else:
-            task_name = self.default_task
+        self.task = self.get_task_validated()
 
-        if task_name not in self.tasks:
-            raise ConfigError("Task name '{}' is not defined.".format(task_name))
-
-        return self.tasks[task_name]
+    def get_task_validated(self):
+        if self.default_task not in self.tasks:
+            raise ConfigError("Task name '{}' is not defined.".format(self.default_task))
+        return self.tasks[self.default_task]
 
     @staticmethod
     def validate(data, overrides):

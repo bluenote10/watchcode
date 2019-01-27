@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # *-* encoding: utf-8
 """
-Generic tool to watch for code changes and continuously execute commands.
+Generic tool to watch code for changes and continuously re-execute tasks.
 """
 
 from __future__ import division, print_function
@@ -26,6 +26,15 @@ logger = logging.getLogger(__name__)
 
 
 def parse_args():
+
+    def str2bool(v):
+        if v.lower() in ('yes', 'true', 't', 'y', '1'):
+            return True
+        elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+            return False
+        else:
+            raise argparse.ArgumentTypeError('Boolean value expected.')
+
     template_names = ", ".join(templates.get_available_templates())
 
     parser = argparse.ArgumentParser(description=__doc__)
@@ -33,9 +42,7 @@ def parse_args():
         "task",
         default=None,
         nargs='?',
-        help="Run a specific tasj. By default, uses the default task setting "
-             "from the YAML config. If an explicit task is specified, the value "
-             "in the config is ignored.",
+        help="Run a specific task. Overrides 'default_task' setting in config.",
     )
     parser.add_argument(
         "--dir",
@@ -51,8 +58,17 @@ def parse_args():
     )
     parser.add_argument(
         "--log",
-        action="store_true",
-        help="Enable debug logging to file '.watchcode.log'.",
+        metavar="<BOOL-LIKE>",
+        type=str2bool,
+        help="Enable/disable debug logging to file '.watchcode.log' "
+             "Overrides 'log' setting in config.",
+    )
+    parser.add_argument(
+        "--sound",
+        metavar="<BOOL-LIKE>",
+        type=str2bool,
+        help="Enable/disable sound notifications "
+             "Overrides 'sound' setting in config.",
     )
     args = parser.parse_args()
 
@@ -71,6 +87,8 @@ def parse_args():
 def extract_overrides(args):
     return Overrides(
         task_name=args.task,
+        log=args.log,
+        sound=args.sound,
     )
 
 
