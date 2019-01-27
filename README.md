@@ -1,4 +1,4 @@
-# watchcode
+# watchcode [![Build Status](https://travis-ci.org/bluenote10/watchcode.svg?branch=master)](https://travis-ci.org/bluenote10/watchcode) [![license](https://img.shields.io/github/license/mashape/apistatus.svg)](LICENSE)
 
 Generic tool to solve the **modify** + **re-run** problem. 
 Cross-language, cross-build-system, cross-test-framework. 
