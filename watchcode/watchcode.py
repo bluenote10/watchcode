@@ -90,7 +90,6 @@ class EventHandler(FileSystemEventHandler):
         self.config_factory = config_factory
 
         self.config = self.initial_config_load()
-        self.task = self.config.task
 
         self.io_handler = IOHandler(working_dir)
 
@@ -132,7 +131,7 @@ class EventHandler(FileSystemEventHandler):
         """
         Actual event handler.
         """
-        matches = matching.does_match(self.task.fileset, event)
+        matches = matching.does_match(self.config.task.fileset, event)
 
         # There is one exception we should make for logging: We should not log
         # changes to '.watchcode.log' otherwise a log event would trigger yet
@@ -146,8 +145,9 @@ class EventHandler(FileSystemEventHandler):
 
         if matches:
             launch_info = LaunchInfo(
+                clear_screen=self.config.task.clear_screen,
+                queue_events=self.config.task.queue_events,
                 trigger=event,
-                task=self.task,
                 config_factory=self.config_factory,
                 on_task_finished=self.on_task_finished,
             )
@@ -157,9 +157,7 @@ class EventHandler(FileSystemEventHandler):
         """
         Callback for finished build.
         """
-        print(" * Updating config...")
         self.config = config
-        self.task = self.config.task
 
     def on_manual_trigger(self, is_initial=False):
         """
@@ -170,12 +168,10 @@ class EventHandler(FileSystemEventHandler):
         else:
             trigger = ManualTrigger()
 
-        if self.task is None or self.config is None:
-            return
-
         launch_info = LaunchInfo(
+            clear_screen=self.config.task.clear_screen,
+            queue_events=self.config.task.queue_events,
             trigger=trigger,
-            task=self.task,
             config_factory=self.config_factory,
             on_task_finished=self.on_task_finished,
         )

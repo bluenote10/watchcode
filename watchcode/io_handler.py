@@ -132,9 +132,10 @@ class ExecInfo(object):
 
 
 class LaunchInfo(object):
-    def __init__(self, trigger, task, config_factory, on_task_finished):
+    def __init__(self, clear_screen, queue_events, trigger, config_factory, on_task_finished):
+        self.clear_screen = clear_screen
+        self.queue_events = queue_events
         self.trigger = trigger
-        self.task = task
         self.config_factory = config_factory
         self.on_task_finished = on_task_finished
 
@@ -149,18 +150,17 @@ class IOHandler(object):
         self.debouncer = Debouncer()
 
     def trigger(self, launch_info):
-        self.debouncer.trigger(lambda: self._run_task(launch_info), 0.2, launch_info.task.queue_events)
+        self.debouncer.trigger(lambda: self._run_task(launch_info), 0.2, launch_info.queue_events)
 
     def _run_task(self, launch_info):
         exec_infos = []
 
-        if launch_info.task.clear_screen:
+        if launch_info.clear_screen:
             self._clear_screen()
 
         print(" * Trigger: {}".format(launch_info.trigger))
 
         try:
-            print(" * Reloading config")
             config = launch_info.config_factory.load_config()
         except ConfigError as e:
             print(" * {}Error reloading config{}:\n{}".format(
@@ -173,7 +173,7 @@ class IOHandler(object):
             # TODO: and make it an explicit call here.
             return
 
-        for command in launch_info.task.commands:
+        for command in config.task.commands:
             print(" * Running: {}{}{}".format(
                 color(FG.blue, style=Style.bold),
                 command,

@@ -13,7 +13,7 @@ tasks:
   default:
     fileset: default
     commands:
-      - "py.test tests/test_config.py"
+      - "py.test"
     clear_screen: true
     queue_events: false
 
