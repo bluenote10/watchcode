@@ -39,42 +39,46 @@ def parse_args():
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "task",
-        default=None,
-        nargs='?',
-        help="Run a specific task. Overrides 'default_task' setting in config.",
-    )
-    parser.add_argument(
         "--dir",
+        metavar="<DIR>",
         default=".",
         help="Working directory to run in, defaults to the current directory.",
     )
     parser.add_argument(
         "--init-config",
         metavar="<TEMPLATE>",
+        const="generic",
+        nargs="?",
         help="Create a new '.watchcode.yaml' config in the current working directory "
-             "from a preset. Available templates: {}".format(template_names),
+             "(if none exists) from a preset template. "
+             "Defaults to the 'generic' template. "
+             "Available templates: {}".format(template_names),
         type=templates.render_template,
+    )
+    parser.add_argument(
+        "--task",
+        metavar="<TASK>",
+        help="Run a specific task. Overrides 'default_task' setting in config.",
     )
     parser.add_argument(
         "--log",
         metavar="<BOOL-LIKE>",
         type=str2bool,
-        help="Enable/disable debug logging to file '.watchcode.log' "
+        help="Enable/disable debug logging to file '.watchcode.log'. "
              "Overrides 'log' setting in config.",
     )
     parser.add_argument(
         "--sound",
         metavar="<BOOL-LIKE>",
         type=str2bool,
-        help="Enable/disable sound notifications "
+        help="Enable/disable sound notifications. "
              "Overrides 'sound' setting in config.",
     )
     parser.add_argument(
         "--notifications",
         metavar="<BOOL-LIKE>",
         type=str2bool,
-        help="Enable/disable display notifications "
+        help="Enable/disable display notifications. "
              "Overrides 'notifications' setting in config.",
     )
     args = parser.parse_args()
@@ -202,8 +206,8 @@ def main():
     if args.init_config is not None:
         config_path = os.path.join(working_dir, DEFAULT_CONFIG_FILENAME)
         if os.path.exists(config_path):
-            print("Config file '{}' already exists. Remove file first "
-                  "if you want a new config.".format(config_path))
+            print("Config file '{}' already exists. Remove it "
+                  "if you want to create a new config.".format(config_path))
             sys.exit(1)
         else:
             print(" * Creating config file '{}'.".format(config_path))

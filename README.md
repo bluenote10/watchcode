@@ -10,6 +10,7 @@ Powered by Python / [watchdog](https://github.com/gorakhargosh/watchdog).
 - Different file matching styles (gitlike, regex, fnmatch).
 - Within git repositories, trigger rules can leverage existing gitignore rules.
 - Trigger debouncing to account for editor peculiarities.
+- Config auto-reloading, i.e., any config change (trigger rules / commands) gets picked up automatically — no restarts required.
 - Optional task success audio feedback*.
 - Optional task success system notifications*.
 

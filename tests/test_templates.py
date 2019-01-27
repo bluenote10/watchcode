@@ -11,7 +11,7 @@ import argparse
 
 def test_available_templates():
     available_templates = templates.get_available_templates()
-    assert len(available_templates) == 4
+    assert len(available_templates) == 10
 
 
 def test_get_template():

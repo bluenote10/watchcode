@@ -12,10 +12,25 @@ class Template(object):
 
 
 TEMPLATES = {
+    "generic": Template(
+        includes=["*"],
+        excludes=[],
+        commands=["echo 'Running task...'"],
+    ),
     "python": Template(
         includes=["*.py"],
         excludes=["*.pyc", "__pycache__"],
         commands=["py.test"],
+    ),
+    "cmake": Template(
+        includes=["*.c", "*.cpp", "*.c++", "*.h", "*.hpp", "*.h++"],
+        excludes=["*.so"],
+        commands=["mkdir -p build && cmake .. && make"],
+    ),
+    "node": Template(
+        includes=["*.js", "*.ts", "*.html", "*.css"],
+        excludes=[],
+        commands=["npm start"],
     ),
     "nim": Template(
         includes=["*.nim"],
@@ -58,6 +73,9 @@ def get_template(template_name):
 def render_template(name):
     # Note this function raises argparse.ArgumentTypeError because we use it
     # directly in the argparsing.
+    if name == "":
+        name = "generic"
+
     try:
         template_file, template = get_template(name)
     except KeyError:
