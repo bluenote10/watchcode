@@ -70,6 +70,13 @@ def parse_args():
         help="Enable/disable sound notifications "
              "Overrides 'sound' setting in config.",
     )
+    parser.add_argument(
+        "--notifications",
+        metavar="<BOOL-LIKE>",
+        type=str2bool,
+        help="Enable/disable display notifications "
+             "Overrides 'notifications' setting in config.",
+    )
     args = parser.parse_args()
 
     if args.log:
@@ -89,6 +96,7 @@ def extract_overrides(args):
         task_name=args.task,
         log=args.log,
         sound=args.sound,
+        notifications=args.notifications,
     )
 
 
@@ -155,8 +163,7 @@ class EventHandler(FileSystemEventHandler):
 
         if matches:
             launch_info = LaunchInfo(
-                clear_screen=self.config.task.clear_screen,
-                queue_events=self.config.task.queue_events,
+                old_config=self.config,
                 trigger=event,
                 config_factory=self.config_factory,
                 on_task_finished=self.on_task_finished,
@@ -179,8 +186,7 @@ class EventHandler(FileSystemEventHandler):
             trigger = ManualTrigger()
 
         launch_info = LaunchInfo(
-            clear_screen=self.config.task.clear_screen,
-            queue_events=self.config.task.queue_events,
+            old_config=self.config,
             trigger=trigger,
             config_factory=self.config_factory,
             on_task_finished=self.on_task_finished,

@@ -34,6 +34,7 @@ tasks:
 default_task: default
 log: false
 sound: true
+notifications: true
 """
 
 CONFIG_VALID_MIN = """\

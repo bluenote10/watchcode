@@ -7,7 +7,7 @@ filesets:
     exclude:
       - ".watchcode.log"
     exclude_gitignore: true
-    match_mode: "fnmatch"
+    match_mode: "gitlike"
 
 tasks:
   default:
@@ -19,3 +19,4 @@ tasks:
 
 default_task: default
 log: false
+sound: true

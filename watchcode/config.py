@@ -175,14 +175,15 @@ class Task(object):
 
 
 class Overrides(object):
-    def __init__(self, task_name=None, log=None, sound=None):
+    def __init__(self, task_name=None, log=None, sound=None, notifications=None):
         self.task_name = task_name
         self.log = log
         self.sound = sound
+        self.notifications = notifications
 
 
 class Config(object):
-    def __init__(self, overrides, tasks, default_task, log, sound):
+    def __init__(self, overrides, tasks, default_task, log, sound, notifications):
         self.overrides = overrides
 
         def with_override(value, override_value):
@@ -196,6 +197,7 @@ class Config(object):
         self.default_task = with_override(default_task, overrides.task_name)
         self.log = with_override(log, overrides.log)
         self.sound = with_override(sound, overrides.sound)
+        self.notifications = with_override(notifications, overrides.notifications)
 
         self.task = self.get_task_validated()
 
@@ -213,6 +215,7 @@ class Config(object):
         default_task = extractor("default_task", CheckerStr())
         log = extractor("log", CheckerBool(), default=True)
         sound = extractor("sound", CheckerBool(), default=False)
+        notifications = extractor("notifications", CheckerBool(), default=False)
 
         # subparsers including consistency check
         filesets = map_dict_values(filesets_dict, FileSet.validate)
@@ -225,6 +228,7 @@ class Config(object):
             default_task=default_task,
             log=log,
             sound=sound,
+            notifications=notifications,
         )
 
 

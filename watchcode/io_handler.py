@@ -132,9 +132,8 @@ class ExecInfo(object):
 
 
 class LaunchInfo(object):
-    def __init__(self, clear_screen, queue_events, trigger, config_factory, on_task_finished):
-        self.clear_screen = clear_screen
-        self.queue_events = queue_events
+    def __init__(self, old_config, trigger, config_factory, on_task_finished):
+        self.old_config = old_config
         self.trigger = trigger
         self.config_factory = config_factory
         self.on_task_finished = on_task_finished
@@ -150,12 +149,17 @@ class IOHandler(object):
         self.debouncer = Debouncer()
 
     def trigger(self, launch_info):
-        self.debouncer.trigger(lambda: self._run_task(launch_info), 0.2, launch_info.queue_events)
+        self.debouncer.trigger(
+            lambda: self._run_task(launch_info),
+            0.2,    # TODO make configurable
+            launch_info.old_config.task.queue_events,
+        )
 
     def _run_task(self, launch_info):
         exec_infos = []
+        old_config = launch_info.old_config
 
-        if launch_info.clear_screen:
+        if old_config.task.clear_screen:
             self._clear_screen()
 
         print(" * Trigger: {}".format(launch_info.trigger))
@@ -166,10 +170,14 @@ class IOHandler(object):
             print(" * {}Error reloading config{}:\n{}".format(
                 color(FG.red),
                 color(),
-                str(e),
+                e,
             ))
-            if config.sound:
+            # Note: No config available, fallback to old config...
+            if old_config.sound:
                 self._notify_sound(success=False)
+            if old_config.notifications:
+                messages = ["Error reloading config:\n{}".format(e)]
+                self._notify_display(success=False, messages=messages)
             return
 
         for command in config.task.commands:
@@ -189,6 +197,12 @@ class IOHandler(object):
         success = self._report_task_result(exec_infos)
         if config.sound:
             self._notify_sound(success)
+        if config.notifications:
+            messages = [
+                "'{}' took {:.1f} sec and returned {}.".format(e.command, e.runtime, e.retcode)
+                for e in exec_infos
+            ]
+            self._notify_display(success, messages)
 
         # Return re-loaded config to monitoring thread
         launch_info.on_task_finished(config)
@@ -219,10 +233,13 @@ class IOHandler(object):
 
     @staticmethod
     def _notify_sound(success):
+        # TODO: make configurable
+        file_positive = "456581__bumpelsnake__nameit5.wav"
+        file_negative = "377017__elmasmalo1__notification-pop.wav"
         if success:
-            snd_file = os.path.join(os.path.dirname(__file__), "sounds", "456581__bumpelsnake__nameit5.wav")
+            snd_file = os.path.join(os.path.dirname(__file__), "sounds", file_positive)
         else:
-            snd_file = os.path.join(os.path.dirname(__file__), "sounds", "377017__elmasmalo1__notification-pop.wav")
+            snd_file = os.path.join(os.path.dirname(__file__), "sounds", file_negative)
         try:
             p = subprocess.Popen(
                 ["ffplay", "-nodisp", "-autoexit", "-hide_banner", snd_file],
@@ -232,6 +249,22 @@ class IOHandler(object):
             p.wait()
         except Exception as e:
             print(" * Failed to play sound notification:\n{}".format(e))
+
+    @staticmethod
+    def _notify_display(success, messages):
+        if success:
+            title = "SUCCESS"
+        else:
+            title = "FAILURE"
+        try:
+            p = subprocess.Popen(
+                ["notify-send", title, "\n".join(messages)],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            p.wait()
+        except Exception as e:
+            print(" * Failed to send notification:\n{}".format(e))
 
     @staticmethod
     def _clear_screen():

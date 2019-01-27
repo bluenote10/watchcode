@@ -4,21 +4,32 @@ Generic tool to solve the **modify** + **re-run** problem.
 Cross-language, cross-build-system, cross-test-framework. 
 Powered by Python / [watchdog](https://github.com/gorakhargosh/watchdog).
 
-Features:
+##### Features
 
 - Simple YAML file format to specify **which files** to monitor and **what task** to run.
 - Different file matching styles (gitlike, regex, fnmatch).
-- Within git repositories, matching can follow existing gitignore rules.
-- Configurable event debouncing to account for editor peculiarities.
+- Within git repositories, trigger rules can leverage existing gitignore rules.
+- Trigger debouncing to account for editor peculiarities.
 - Optional task success audio feedback*.
 - Optional task success system notifications*.
 
 [*] useful when working in single screen / full screen scenarios.
 
-Setting up flawless file monitoring manually can be tricky: 
-Sometimes trigger rules are too narrow / too broad, or editors might confuse watchers by unexpected ways to write files.
-Watchcode's flexible matching features make it easy to get the right behavior.
+##### Why watchcode?
+
+Many build tools offer watch + run functionality, 
+but they solve the problem only for a particular language/framework, 
+and the quality/features are sometimes lacking.
+I'm jumping between languages a lot, and I wanted a solution that works everywhere.
 Watchcode is written in Python, but can be used for any task from simple shell scripts, over dynamic languages, up to more complex build systems like CMake/Maven.
+
+Note that setting up file monitoring generically can be tricky: 
+Sometimes trigger rules are too narrow / too broad, or editors might confuse watchers by unexpected ways to write files.
+Watchcode's makes it easy to get the right behavior by offering flexible matching schemes and leveraging existing gitignore rules.
+
+
+## Demo
+
 
 
 ## Installation
@@ -35,9 +46,6 @@ Not familiar with Python? Here's the gist:
 - Create a virtualenv (e.g. `virtualenv ~/.virtualenvs/my_venv`).
 - Activate virtualenv (e.g. `. ~/.virtualenvs/my_venv/bin/activate`).
 - Ready to `pip install watchcode`...
-
-
-## Demo
 
 
 ## Usage

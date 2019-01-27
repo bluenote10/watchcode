@@ -19,4 +19,5 @@ tasks:
 
 default_task: default
 log: false
-sound: true
+sound: false
+notifications: false
