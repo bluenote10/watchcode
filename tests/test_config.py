@@ -33,6 +33,7 @@ tasks:
 
 default_task: default
 log: false
+sound: true
 """
 
 CONFIG_VALID_MIN = """\

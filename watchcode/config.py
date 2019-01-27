@@ -175,16 +175,19 @@ class Task(object):
 
 
 class Overrides(object):
-    def __init__(self, task_name=None):
+    def __init__(self, task_name=None, sound=None):
         self.task_name = task_name
+        self.sound = sound
 
 
 class Config(object):
-    def __init__(self, overrides, tasks, default_tasks, log):
+    def __init__(self, overrides, tasks, default_task, log, sound):
         self.overrides = overrides
+
         self.tasks = tasks
-        self.default_task = default_tasks
+        self.default_task = default_task
         self.log = log
+        self.sound = sound
 
         self.task = self.get_task()
 
@@ -207,13 +210,20 @@ class Config(object):
         tasks_dict = extractor("tasks", CheckerDict())
         default_task = extractor("default_task", CheckerStr())
         log = extractor("log", CheckerBool(), default=True)
+        sound = extractor("sound", CheckerBool(), default=False)
 
         # subparsers including consistency check
         filesets = map_dict_values(filesets_dict, FileSet.validate)
         tasks = map_dict_values(tasks_dict, functools.partial(Task.validate, filesets=filesets))
 
         extractor.verify_no_extra_keys()
-        return Config(overrides, tasks, default_task, log)
+        return Config(
+            overrides=overrides,
+            tasks=tasks,
+            default_task=default_task,
+            log=log,
+            sound=sound,
+        )
 
 
 def load_config(working_directory, overrides):

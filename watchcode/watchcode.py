@@ -11,7 +11,6 @@ import os
 import logging
 import sys
 import time
-import six
 
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
@@ -204,10 +203,11 @@ def main():
     try:
         while True:
             time.sleep(1000)
-        #while True:
-        #    input_value = six.moves.input()
-        #    if input_value == "":
-        #        event_handler.on_manual_trigger()
+        # TODO: make this optional
+        # while True:
+        #     input_value = six.moves.input()
+        #     if input_value == "":
+        #         event_handler.on_manual_trigger()
     except KeyboardInterrupt:
         observer.stop()
     observer.join()

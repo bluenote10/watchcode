@@ -168,9 +168,8 @@ class IOHandler(object):
                 color(),
                 str(e),
             ))
-            # TODO: We should play the "failed build" sound here for consistency,
-            # TODO: which would mean to pull out the sound playing from _report_build_result
-            # TODO: and make it an explicit call here.
+            if config.sound:
+                self._notify_sound(success=False)
             return
 
         for command in config.task.commands:
@@ -187,18 +186,22 @@ class IOHandler(object):
             t2 = time.time()
             exec_infos.append(ExecInfo(command, t2 - t1, retcode))
 
-        self._report_build_result(exec_infos)
+        success = self._report_build_result(exec_infos)
+        if config.sound:
+            self._notify_sound(success)
+
+        # Return re-loaded config to monitoring thread
         launch_info.on_task_finished(config)
 
     def _report_build_result(self, exec_infos):
         print(" * Task summary:")
-        all_good = True
+        success = True
         for exec_info in exec_infos:
             if exec_info.retcode == 0:
                 return_color = FG.green
             else:
                 return_color = FG.red
-                all_good = False
+                success = False
             print("   {}{}{} took {}{:.1f}{} sec and returned {}{}{}.".format(
                 color(FG.blue, style=Style.bold),
                 exec_info.command,
@@ -212,14 +215,23 @@ class IOHandler(object):
             ))
         print(" * Monitoring '{}' for changes... [Press <CTRL>+C to exit, <ENTER> to re-run]".format(self.working_dir))
         sys.stdout.flush()
+        return success
 
-        if all_good:
+    @staticmethod
+    def _notify_sound(success):
+        if success:
             snd_file = os.path.join(os.path.dirname(__file__), "sounds", "456581__bumpelsnake__nameit5.wav")
         else:
             snd_file = os.path.join(os.path.dirname(__file__), "sounds", "377017__elmasmalo1__notification-pop.wav")
-        p = subprocess.Popen(["ffplay", "-nodisp", "-autoexit", "-hide_banner", snd_file], stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE)
-        p.wait()
+        try:
+            p = subprocess.Popen(
+                ["ffplay", "-nodisp", "-autoexit", "-hide_banner", snd_file],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            p.wait()
+        except Exception as e:
+            print(" * Failed to play sound notification:\n{}".format(e))
 
     @staticmethod
     def _clear_screen():
