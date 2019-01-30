@@ -150,27 +150,22 @@ def verify_gitignore_rules(matches, differs):
 
 
 def test_gitlike(tmpdir):
-    with tmpdir.as_cwd():
-        os.system("git init --quiet")
-
-    def reference(path, pattern, is_dir):
-        with tmpdir.as_cwd():
-            with open(".gitignore", "w") as f:
-                f.write(pattern)
-            #res = os.system("git ")
-            return is_gitignore(path)
-
     matches, differs = define_matches_and_differs(matcher_gitlike)
     verify_gitignore_rules(matches, differs)
 
 
 def test_is_gitignore(tmpdir):
 
+    def fix_path(path):
+        # Test are written assuming os.sep is '/' => convert for Windows
+        return path.replace("/", os.sep)
+
     def set_gitignore(pattern):
         with open(".gitignore", "w") as f:
             f.write(pattern)
 
     def matches(pattern, path, is_dir=False):
+        path = fix_path(path)
         if is_dir:
             path = path + os.sep
         set_gitignore(pattern)
@@ -178,6 +173,7 @@ def test_is_gitignore(tmpdir):
             "pattern '{}' must match path '{}'".format(pattern, path)
 
     def differs(pattern, path, is_dir=False):
+        path = fix_path(path)
         if is_dir:
             path = path + os.sep
         set_gitignore(pattern)
