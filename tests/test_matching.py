@@ -5,14 +5,21 @@ from watchcode.trigger import FileEvent
 from watchcode.matching import matcher_fnmatch, matcher_re, matcher_gitlike, is_gitignore
 
 
+def fix_path(path):
+    # Test are written assuming os.sep is '/' => convert for Windows
+    return path.replace("/", os.sep)
+
+
 def define_matches_and_differs(func):
 
     def matches(pattern, path, is_dir=False):
+        path = fix_path(path)
         event = FileEvent(path, "modified", is_dir)
         assert func(pattern, event), \
             "pattern '{}' must match path: '{}'".format(pattern, path)
 
     def differs(pattern, path, is_dir=False):
+        path = fix_path(path)
         event = FileEvent(path, "modified", is_dir)
         assert not func(pattern, event), \
             "pattern '{}' must NOT match path: '{}'".format(pattern, path)
@@ -155,10 +162,6 @@ def test_gitlike(tmpdir):
 
 
 def test_is_gitignore(tmpdir):
-
-    def fix_path(path):
-        # Test are written assuming os.sep is '/' => convert for Windows
-        return path.replace("/", os.sep)
 
     def set_gitignore(pattern):
         with open(".gitignore", "w") as f:

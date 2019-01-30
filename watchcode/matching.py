@@ -21,82 +21,6 @@ def matcher_re(pattern, event):
     m = re.search(pattern, event.path)
     return m is not None
 
-"""
-def directories_match_absolute(dirs_event, dirs_pattern):
-    if len(dirs_event) != len(dirs_pattern):
-        return False
-    else:
-        for i in range(len(dirs_event)):
-            if not fnmatch.fnmatch(dirs_event[i], dirs_pattern[i]):
-                return False
-        return True
-
-
-def directories_match_subpath(dirs_event, dirs_pattern):
-    i = len(dirs_pattern) - 1
-    j = len(dirs_event) - 1
-    if i < 0:
-        # having no dir requirements in the pattern means a match
-        # (still has to be combined with file name matching)
-        return True
-    while i >= 0:
-        if j < 0:
-            # having a dir requirement in the pattern, but no parent
-            # dirs in the event => can't be a match
-            return False
-        if not fnmatch.fnmatch(dirs_event[j], dirs_pattern[i]):
-            return False
-        i -= 1
-        j -= 1
-    return True
-
-
-def matcher_gitlike_attempt1(pattern, event):
-    GITIGNORE_SEP = "/"
-
-    pattern_is_absolute = pattern.startswith(GITIGNORE_SEP)
-    pattern_is_dir = pattern.endswith(GITIGNORE_SEP)
-    pattern_components = pattern.split(GITIGNORE_SEP)
-
-    def extract_dirs_pattern():
-        if pattern_is_dir:
-            dirs = pattern.split(GITIGNORE_SEP)
-        else:
-            dirs = pattern.split(GITIGNORE_SEP)[:-1]
-        return [d for d in dirs if d != "." and d != ""]
-
-    def sublist(lst1, lst2):
-        ls1 = [element for element in lst1 if element in lst2]
-        ls2 = [element for element in lst2 if element in lst1]
-        return ls1 == ls2
-
-    if len(pattern_components) >= 2 and pattern_components[-1] == "":
-        file_pattern = pattern_components[-2]
-    else:
-        file_pattern = pattern_components[-1]
-
-    dirs_event = event.directories
-    dirs_pattern = extract_dirs_pattern()
-
-    #logging.info(pattern_components)
-    if pattern == '/*.log' and event.path == './sub/.hidden.log':
-        import IPython; IPython.embed()
-
-    if pattern_is_dir:
-        if pattern_is_absolute:
-            return directories_match_absolute(dirs_event, dirs_pattern)
-        else:
-            return directories_match_subpath(dirs_event, dirs_pattern)
-
-
-    # reverse traversal
-    filename_match = fnmatch.fnmatch(event.basename, file_pattern)
-
-    #if pattern_is_absolute:
-
-    return filename_match or pattern in event.path_normalized
-"""
-
 
 def matcher_gitlike(pattern, event):
     GITIGNORE_SEP = "/"
@@ -229,8 +153,6 @@ def does_match(fileset, event):
             if is_gitignore(event.path):
                 matches = False
 
-    #if matches:
-    #    import IPython; IPython.embed()
     return matches
 
 
