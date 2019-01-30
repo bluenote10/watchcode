@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 with open("requirements.txt") as f:
     requirements = f.read().splitlines()
@@ -8,11 +8,12 @@ setup(
     version="0.1.0",
     description="Generic tool to solve the modify + re-run problem",
     install_requires=requirements,
+    setup_requires=["pytest-runner"],
     tests_require=[
         "pytest",
         "pytest-cov",
     ],
-    packages=['watchcode'],
+    packages=find_packages(),
     license="MIT",
     author="Fabian Keller",
 )
