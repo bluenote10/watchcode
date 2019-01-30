@@ -1,10 +1,12 @@
-# watchcode [![Build Status](https://travis-ci.org/bluenote10/watchcode.svg?branch=master)](https://travis-ci.org/bluenote10/watchcode) [![license](https://img.shields.io/github/license/mashape/apistatus.svg)](LICENSE)
+# watchcode [![Build Status](https://travis-ci.org/bluenote10/watchcode.svg?branch=master)](https://travis-ci.org/bluenote10/watchcode) [![Build status](https://ci.appveyor.com/api/projects/status/robm64ar9dufb5g0?svg=true)](https://ci.appveyor.com/project/bluenote10/watchcode) [![license](https://img.shields.io/github/license/mashape/apistatus.svg)](LICENSE)
 
 Generic tool to solve the **modify** + **re-run** problem. 
-Cross-language, cross-build-system, cross-test-framework. 
+Cross-platform, cross-language, cross-build-system. 
 Powered by Python / [watchdog](https://github.com/gorakhargosh/watchdog).
 
-##### Features
+![demo](/../examples/examples/python.gif)
+
+### Features
 
 - Simple YAML file format to specify **which files** to monitor and **what task** to run.
 - Different file matching styles (gitlike, regex, fnmatch).
@@ -16,7 +18,7 @@ Powered by Python / [watchdog](https://github.com/gorakhargosh/watchdog).
 
 [*] useful when working in single screen / full screen scenarios.
 
-##### Why watchcode?
+### Why watchcode?
 
 Many build tools offer watch + run functionality, 
 but they solve the problem only for a particular language/framework, 
@@ -27,11 +29,6 @@ Watchcode is written in Python, but can be used for any task from simple shell s
 Note that setting up file monitoring generically can be tricky: 
 Sometimes trigger rules are too narrow / too broad, or editors might confuse watchers by unexpected ways to write files.
 Watchcode's makes it easy to get the right behavior by offering flexible matching schemes and leveraging existing gitignore rules.
-
-
-## Demo
-
-![demo](/../examples/examples/python.gif)
 
 
 ## Installation
