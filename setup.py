@@ -16,4 +16,6 @@ setup(
     packages=find_packages(),
     license="MIT",
     author="Fabian Keller",
+    package_data={"": ["**/*.yaml", "**/*.wav"]},
+    include_package_data=True,
 )
