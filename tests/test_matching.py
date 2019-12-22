@@ -155,6 +155,10 @@ def verify_gitignore_rules(matches, differs):
     matches(".../*", ".../x")
     matches(".*", ".hidden")
 
+    # stability checks (single component paths vs multi components)
+    differs("src/*", ".", is_dir=True)
+    matches("*", "./long/path")
+
 
 def test_gitlike(tmpdir):
     matches, differs = define_matches_and_differs(matcher_gitlike)

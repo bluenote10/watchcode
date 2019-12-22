@@ -75,7 +75,11 @@ def matcher_gitlike(pattern, event):
         i = 0
         while True:
             # print(i, evt_comps[i], pattern_comps[i])
-            if not fnmatch.fnmatch(evt_comps[i], pattern_comps[i]):
+            try:
+                current_comp_matches = fnmatch.fnmatch(evt_comps[i], pattern_comps[i])
+            except IndexError:
+                current_comp_matches = False
+            if not current_comp_matches:
                 return False
             i += 1
             if i >= len(evt_comps) and i >= len(pattern_comps):
